@@ -8,9 +8,9 @@
     "npm": ">=10.x"
   },
   "scripts": {
-    "start": "pm2 start index.js --deep-monitoring --attach --name popkid",
-    "stop": "pm2 stop popkid",
-    "restart": "pm2 restart popkid"
+    "start": "pm2 start index.js --deep-monitoring --attach --name POPKID-XTR",
+    "stop": "pm2 stop POPKID-XTR",
+    "restart": "pm2 restart POPKID-XTR"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "github:EdderBot02/bail",
