@@ -106,9 +106,9 @@ async function loadSession() {
             return null;
         }
 
-        if (config.SESSION_ID.startsWith("POPKID;;;")) {
+        if (config.SESSION_ID.startsWith("POPKID~")) {
             console.log(chalk.yellow("[ ⏳ ] Decoding base64 session..."));
-            const base64Data = config.SESSION_ID.replace("POPKID;;;", "");
+            const base64Data = config.SESSION_ID.replace("POPKID~", "");
             if (!/^[A-Za-z0-9+/=]+$/.test(base64Data)) {
                 throw new Error("Invalid base64 format in SESSION_ID");
             }
@@ -122,9 +122,9 @@ async function loadSession() {
             fs.writeFileSync(credsPath, decodedData);
             console.log(chalk.green("[ ✅ ] Base64 session decoded and saved successfully"));
             return sessionData;
-        } else if (config.SESSION_ID.startsWith("POPKID;;;")) {
+        } else if (config.SESSION_ID.startsWith("POPKID~")) {
             console.log(chalk.yellow("[ ⏳ ] Downloading MEGA.nz session..."));
-            const megaFileId = config.SESSION_ID.replace("POPKID;;;", "");
+            const megaFileId = config.SESSION_ID.replace("POPKID~", "");
             const filer = File.fromURL(`https://mega.nz/file/${megaFileId}`);
             const data = await new Promise((resolve, reject) => {
                 filer.download((err, data) => {
@@ -136,7 +136,7 @@ async function loadSession() {
             console.log(chalk.green("[ ✅ ] MEGA session downloaded successfully"));
             return JSON.parse(data.toString());
         } else {
-            throw new Error("Invalid SESSION_ID format. Use 'POPKID;;;' for base64 or 'POPKID;;;' for MEGA.nz");
+            throw new Error("Invalid SESSION_ID format. Use 'POPKID~' for base64 or 'POPKID~' for MEGA.nz");
         }
     } catch (error) {
         console.error(chalk.red("❌ Error loading session:", error.message));
