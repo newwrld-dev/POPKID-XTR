@@ -2,241 +2,232 @@ const axios = require('axios')
 const config = require('./config')
 const {
   default: makeWASocket,
-    useMultiFileAuthState,
-    DisconnectReason,
-    jidNormalizedUser,
-    isJidBroadcast,
-    getContentType,
-    proto,
-    generateWAMessageContent,
-    generateWAMessage,
-    AnyMessageContent,
-    prepareWAMessageMedia,
-    areJidsSameUser,
-    downloadContentFromMessage,
-    MessageRetryMap,
-    generateForwardMessageContent,
-    generateWAMessageFromContent,
-    generateMessageID, makeInMemoryStore,
-    jidDecode,
-    fetchLatestBaileysVersion,
-    Browsers
-  } = require(config.BAILEYS)
-  
-  
-  const l = console.log
-  const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson } = require('./lib/functions')
-  const { AntiDelDB, initializeAntiDeleteSettings, setAnti, getAnti, getAllAntiDeleteSettings, saveContact, loadMessage, getName, getChatSummary, saveGroupMetadata, getGroupMetadata, saveMessageCount, getInactiveGroupMembers, getGroupMembersMessageCount, saveMessage } = require('./data')
-  const fs = require('fs')
-  const ff = require('fluent-ffmpeg')
-  const P = require('pino')
-  const GroupEvents = require('./lib/groupevents');
-  const { PresenceControl, BotActivityFilter } = require('./data/presence');
-  const qrcode = require('qrcode-terminal')
-  const StickersTypes = require('wa-sticker-formatter')
-  const util = require('util')
-  const { sms, downloadMediaMessage, AntiDelete } = require('./lib')
-  const FileType = require('file-type');
-  const { File } = require('megajs')
-  const { fromBuffer } = require('file-type')
-  const bodyparser = require('body-parser')
-  const os = require('os')
-  const Crypto = require('crypto')
-  const path = require('path')
-  const chalk = require('chalk')
-  const prefix = config.PREFIX
-  // const { commands } = require('./command');
-  const ownerNumber = ['254732297194']
+  useMultiFileAuthState,
+  DisconnectReason,
+  jidNormalizedUser,
+  isJidBroadcast,
+  getContentType,
+  proto,
+  generateWAMessageContent,
+  generateWAMessage,
+  AnyMessageContent,
+  prepareWAMessageMedia,
+  areJidsSameUser,
+  downloadContentFromMessage,
+  MessageRetryMap,
+  generateForwardMessageContent,
+  generateWAMessageFromContent,
+  generateMessageID, makeInMemoryStore,
+  jidDecode,
+  fetchLatestBaileysVersion,
+  Browsers
+} = require(config.BAILEYS)
+
+const l = console.log
+const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson } = require('./lib/functions')
+const { AntiDelDB, initializeAntiDeleteSettings, setAnti, getAnti, getAllAntiDeleteSettings, saveContact, loadMessage, getName, getChatSummary, saveGroupMetadata, getGroupMetadata, saveMessageCount, getInactiveGroupMembers, getGroupMembersMessageCount, saveMessage } = require('./data')
+const fs = require('fs')
+const ff = require('fluent-ffmpeg')
+const P = require('pino')
+const GroupEvents = require('./lib/groupevents')
+const { PresenceControl, BotActivityFilter } = require('./data/presence')
+const qrcode = require('qrcode-terminal')
+const StickersTypes = require('wa-sticker-formatter')
+const util = require('util')
+const { sms, downloadMediaMessage, AntiDelete } = require('./lib')
+const FileType = require('file-type')
+const { File } = require('megajs')
+const { fromBuffer } = require('file-type')
+const bodyparser = require('body-parser')
+const os = require('os')
+const Crypto = require('crypto')
+const path = require('path')
+const chalk = require('chalk')
+const prefix = config.PREFIX
+const ownerNumber = ['254732297194']
 
 // Add the missing getPrefix function
-  function getPrefix() {
-      return config.PREFIX || '.';
-  }  
+function getPrefix() {
+  return config.PREFIX || '.'
+}
+
 // Anti-crash handler
-  process.on("uncaughtException", (err) => {
-    console.error("[❗] Uncaught Exception:", err.stack || err);
-  });
+process.on("uncaughtException", (err) => {
+  console.error("[❗] Uncaught Exception:", err.stack || err)
+})
 
-  process.on("unhandledRejection", (reason, p) => {
-    console.error("[❗] Unhandled Promise Rejection:", reason);
-  });
-
-  //=============================================
-  const tempDir = path.join(os.tmpdir(), 'cache-temp')
-  if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir)
-  }
-  
-  const clearTempDir = () => {
-      fs.readdir(tempDir, (err, files) => {
-          if (err) {
-            console.error(chalk.red("[❌] Error clearing temp directory:", err.message));
-            return;
-          }
-          for (const file of files) {
-              fs.unlink(path.join(tempDir, file), err => {
-                  if (err) console.error(chalk.red(`[❌] Error deleting temp file ${file}:`, err.message));
-              });
-          }
-      });
-  }
-//=============================================
-  // Clear the temp directory every 5 minutes
-  setInterval(clearTempDir, 5 * 60 * 1000);
+process.on("unhandledRejection", (reason, p) => {
+  console.error("[❗] Unhandled Promise Rejection:", reason)
+})
 
 //=============================================
+const tempDir = path.join(os.tmpdir(), 'cache-temp')
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir)
+}
 
-const express = require("express");
-const app = express();
-const port = process.env.PORT || 9090;
-  
-  //===================SESSION-AUTH============================
-const sessionDir = path.join(__dirname, 'sessions');
-const credsPath = path.join(sessionDir, 'creds.json');
+const clearTempDir = () => {
+  fs.readdir(tempDir, (err, files) => {
+    if (err) {
+      console.error(chalk.red("[❌] Error clearing temp directory:", err.message))
+      return
+    }
+    for (const file of files) {
+      fs.unlink(path.join(tempDir, file), err => {
+        if (err) console.error(chalk.red(`[❌] Error deleting temp file ${file}:`, err.message))
+      })
+    }
+  })
+}
+
+// Clear the temp directory every 5 minutes
+setInterval(clearTempDir, 5 * 60 * 1000)
+
+//=============================================
+const express = require("express")
+const app = express()
+const port = process.env.PORT || 9090
+
+//===================SESSION-AUTH============================
+const sessionDir = path.join(__dirname, 'sessions')
+const credsPath = path.join(sessionDir, 'creds.json')
 
 // Create session directory if it doesn't exist
 if (!fs.existsSync(sessionDir)) {
-    fs.mkdirSync(sessionDir, { recursive: true });
+  fs.mkdirSync(sessionDir, { recursive: true })
 }
 
+// ✅ FIXED: Proper MEGA session handling
 async function loadSession() {
-    try {
-        if (!config.SESSION_ID) {
-            console.log(chalk.red('No SESSION_ID provided - Falling back to QR or pairing code'));
-            return null;
-        }
-
-        if (config.SESSION_ID.startsWith("POPKID~")) {
-            console.log(chalk.yellow("[ ⏳ ] Decoding base64 session..."));
-            const base64Data = config.SESSION_ID.replace("POPKID~", "");
-            if (!/^[A-Za-z0-9+/=]+$/.test(base64Data)) {
-                throw new Error("Invalid base64 format in SESSION_ID");
-            }
-            const decodedData = Buffer.from(base64Data, "base64");
-            let sessionData;
-            try {
-                sessionData = JSON.parse(decodedData.toString("utf-8"));
-            } catch (error) {
-                throw new Error("Failed to parse decoded base64 session data: " + error.message);
-            }
-            fs.writeFileSync(credsPath, decodedData);
-            console.log(chalk.green("[ ✅ ] Base64 session decoded and saved successfully"));
-            return sessionData;
-        } else if (config.SESSION_ID.startsWith("POPKID~")) {
-            console.log(chalk.yellow("[ ⏳ ] Downloading MEGA.nz session..."));
-            const megaFileId = config.SESSION_ID.replace("POPKID~", "");
-            const filer = File.fromURL(`https://mega.nz/file/${megaFileId}`);
-            const data = await new Promise((resolve, reject) => {
-                filer.download((err, data) => {
-                    if (err) reject(err);
-                    else resolve(data);
-                });
-            });
-            fs.writeFileSync(credsPath, data);
-            console.log(chalk.green("[ ✅ ] MEGA session downloaded successfully"));
-            return JSON.parse(data.toString());
-        } else {
-            throw new Error("Invalid SESSION_ID format. Use 'POPKID~' for base64 or 'POPKID~' for MEGA.nz");
-        }
-    } catch (error) {
-        console.error(chalk.red("❌ Error loading session:", error.message));
-        console.log(chalk.green("Will attempt QR code or pairing code login"));
-        return null;
+  try {
+    const sessionId = config.SESSION_ID
+    if (!sessionId) {
+      console.log(chalk.red('❌ No SESSION_ID provided - Falling back to QR or pairing code'))
+      return null
     }
+
+    if (sessionId.startsWith("POPKID;;;")) {
+      const sessionPart = sessionId.split("POPKID;;;")[1]
+      if (!sessionPart || !sessionPart.includes("#")) {
+        console.log(chalk.red("❌ SESSION_ID format must be: POPKID;;;fileid#key"))
+        return null
+      }
+
+      const [fileId, fileKey] = sessionPart.split("#")
+      const megaFile = File.fromURL(`https://mega.nz/file/${fileId}#${fileKey}`)
+      console.log(chalk.yellow("🔄 Downloading session from MEGA..."))
+
+      const fileData = await new Promise((resolve, reject) => {
+        megaFile.download((err, data) => err ? reject(err) : resolve(data))
+      })
+
+      await fs.promises.writeFile(credsPath, fileData)
+      console.log(chalk.green("✅ Session restored from MEGA."))
+      return JSON.parse(fileData.toString())
+    } else {
+      console.log(chalk.red("❌ Invalid SESSION_ID format. Must start with POPKID;;;"))
+      return null
+    }
+  } catch (error) {
+    console.error(chalk.red("❌ Session download error:", error.message))
+    console.log(chalk.yellow("⚠️ Falling back to QR or pairing code"))
+    return null
+  }
 }
 
 async function connectWithPairing(conn, useMobile) {
-    if (useMobile) {
-        throw new Error("Cannot use pairing code with mobile API");
-    }
-    if (!process.stdin.isTTY) {
-        console.error(chalk.red("❌ Cannot prompt for phone number in non-interactive environment"));
-        process.exit(1);
-    }
+  if (useMobile) {
+    throw new Error("Cannot use pairing code with mobile API")
+  }
+  if (!process.stdin.isTTY) {
+    console.error(chalk.red("❌ Cannot prompt for phone number in non-interactive environment"))
+    process.exit(1)
+  }
 
-    console.log(chalk.bgYellow.black(" ACTION REQUIRED "));
-    console.log(chalk.green("┌" + "─".repeat(46) + "┐"));
-    console.log(chalk.green("│ ") + chalk.bold("Enter WhatsApp number to receive pairing code") + chalk.green(" │"));
-    console.log(chalk.green("└" + "─".repeat(46) + "┘"));
-    
-    const readline = require('readline');
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
-    const question = (text) => new Promise((resolve) => rl.question(text, resolve));
+  console.log(chalk.bgYellow.black(" ACTION REQUIRED "))
+  console.log(chalk.green("┌" + "─".repeat(46) + "┐"))
+  console.log(chalk.green("│ ") + chalk.bold("Enter WhatsApp number to receive pairing code") + chalk.green(" │"))
+  console.log(chalk.green("└" + "─".repeat(46) + "┘"))
 
-    let number = await question(chalk.cyan("» Enter your number (e.g., +254732297194): "));
-    number = number.replace(/[^0-9]/g, "");
-    rl.close();
+  const readline = require('readline')
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  })
+  const question = (text) => new Promise((resolve) => rl.question(text, resolve))
 
-    if (!number) {
-        console.error(chalk.red("❌ No phone number provided"));
-        process.exit(1);
-    }
+  let number = await question(chalk.cyan("» Enter your number (e.g., +254732297194): "))
+  number = number.replace(/[^0-9]/g, "")
+  rl.close()
 
-    try {
-        let code = await conn.requestPairingCode(number);
-        code = code?.match(/.{1,4}/g)?.join("-") || code;
-        console.log("\n" + chalk.bgGreen.black(" SUCCESS ") + " Use this pairing code:");
-        console.log(chalk.bold.yellow("┌" + "─".repeat(46) + "┐"));
-        console.log(chalk.bold.yellow("│ ") + chalk.bgWhite.black(code) + chalk.bold.yellow(" │"));
-        console.log(chalk.bold.yellow("└" + "─".repeat(46) + "┘"));
-        console.log(chalk.yellow("Enter this code in WhatsApp:\n1. Open WhatsApp\n2. Go to Settings > Linked Devices\n3. Tap 'Link a Device'\n4. Enter the code"));
-    } catch (err) {
-        console.error(chalk.red("Error getting pairing code:", err.message));
-        process.exit(1);
-    }
+  if (!number) {
+    console.error(chalk.red("❌ No phone number provided"))
+    process.exit(1)
+  }
+
+  try {
+    let code = await conn.requestPairingCode(number)
+    code = code?.match(/.{1,4}/g)?.join("-") || code
+    console.log("\n" + chalk.bgGreen.black(" SUCCESS ") + " Use this pairing code:")
+    console.log(chalk.bold.yellow("┌" + "─".repeat(46) + "┐"))
+    console.log(chalk.bold.yellow("│ ") + chalk.bgWhite.black(code) + chalk.bold.yellow(" │"))
+    console.log(chalk.bold.yellow("└" + "─".repeat(46) + "┘"))
+    console.log(chalk.yellow("Enter this code in WhatsApp:\n1. Open WhatsApp\n2. Go to Settings > Linked Devices\n3. Tap 'Link a Device'\n4. Enter the code"))
+  } catch (err) {
+    console.error(chalk.red("Error getting pairing code:", err.message))
+    process.exit(1)
+  }
 }
 
 //=======SESSION-AUTH==============
 
 async function connectToWA() {
-    console.log(chalk.cyan("[ 🟠 ] Connecting to WhatsApp ⏳️..."));
-    
-    // Load session if available
-    const creds = await loadSession();
-    
-    const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'sessions'), {
-        creds: creds || undefined // Pass loaded creds if available
-    });
-    
-    const { version } = await fetchLatestBaileysVersion();
-    
-    const pairingCode = config.PAIRING_CODE === 'true' || process.argv.includes('--pairing-code');
-    const useMobile = process.argv.includes('--mobile');
+  console.log(chalk.cyan("[ 🟠 ] Connecting to WhatsApp ⏳️..."))
 
-    const conn = makeWASocket({
-        logger: P({ level: 'silent' }),
-        printQRInTerminal: !creds && !pairingCode,
-        browser: Browsers.macOS("Firefox"),
-        syncFullHistory: true,
-        auth: state,
-        version,
-        getMessage: async () => ({})
-    });
+  // Load session if available
+  const creds = await loadSession()
 
-    if (pairingCode && !state.creds.registered) {
-        await connectWithPairing(conn, useMobile);
+  const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'sessions'), {
+    creds: creds || undefined
+  })
+
+  const { version } = await fetchLatestBaileysVersion()
+
+  const pairingCode = config.PAIRING_CODE === 'true' || process.argv.includes('--pairing-code')
+  const useMobile = process.argv.includes('--mobile')
+
+  const conn = makeWASocket({
+    logger: P({ level: 'silent' }),
+    printQRInTerminal: !creds && !pairingCode,
+    browser: Browsers.macOS("Firefox"),
+    syncFullHistory: true,
+    auth: state,
+    version,
+    getMessage: async () => ({})
+  })
+
+  if (pairingCode && !state.creds.registered) {
+    await connectWithPairing(conn, useMobile)
+  }
+
+  conn.ev.on('connection.update', async (update) => {
+    const { connection, lastDisconnect, qr } = update
+
+    if (connection === 'close') {
+      const reason = lastDisconnect?.error?.output?.statusCode
+      if (reason === DisconnectReason.loggedOut) {
+        console.log(chalk.red('[ 🛑 ] Connection closed, please change session ID or re-authenticate'))
+        if (fs.existsSync(credsPath)) {
+          fs.unlinkSync(credsPath)
+        }
+        process.exit(1)
+      } else {
+        console.log(chalk.red('[ ⏳️ ] Connection lost, reconnecting...'))
+        setTimeout(connectToWA, 5000)
+      }
+    } else if (connection === 'open') {
+      console.log(chalk.green('[ 🤖 ] Connected ✅'))
     }
-
-    conn.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        
-        if (connection === 'close') {
-            const reason = lastDisconnect?.error?.output?.statusCode;
-            if (reason === DisconnectReason.loggedOut) {
-                console.log(chalk.red('[ 🛑 ] Connection closed, please change session ID or re-authenticate'));
-                if (fs.existsSync(credsPath)) {
-                    fs.unlinkSync(credsPath);
-                }
-                process.exit(1);
-            } else {
-                console.log(chalk.red('[ ⏳️ ] Connection lost, reconnecting...'));
-                setTimeout(connectToWA, 5000);
-            }
-        } else if (connection === 'open') {
-            console.log(chalk.green('[ 🤖 ] Connected ✅'));
             
             // Load plugins
             const pluginPath = path.join(__dirname, 'plugins');
