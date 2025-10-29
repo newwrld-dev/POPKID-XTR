@@ -34,7 +34,7 @@ async (conn, mek, m, { from, reply }) => {
 *┃* *👑 Owner:* POPKID
 *┃* *⭐ Stars:* ${repoData.stargazers_count}
 *┃* *⑂ Forks:* ${repoData.forks_count}
-*┃* *📝 Description:* ${repoData.description || 'World Best WhatsApp Bot powered by Imad Ali'}
+*┃* *📝 Description:* ${repoData.description || '*World Best WhatsApp Bot powered by popkid*'}
 *┃* *🔗 GitHub Link:* ${repoData.html_url}
 *┗──────────────⊷*
 `.trim();
