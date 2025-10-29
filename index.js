@@ -772,10 +772,17 @@ if (!isReact && config.CUSTOM_REACT === 'true') {
     conn.serializeM = mek => sms(conn, mek, store);
   }
   
-  app.get("/", (req, res) => {
+  // Root endpoint for uptime pingers or Heroku
+app.get("/", (req, res) => {
   res.send("POPKID MD STARTED ✅");
-  });
-  app.listen(port, () => console.log(`Server listening on port http://localhost:${port}`));
+});
+
+// Start server
+app.listen(port, () => {
+  console.log(`✅ Server is running at: http://localhost:${port}`);
+  
+  // Wait 4 seconds before connecting to WhatsApp
   setTimeout(() => {
-  connectToWA()
+    connectToWA();
   }, 4000);
+});
