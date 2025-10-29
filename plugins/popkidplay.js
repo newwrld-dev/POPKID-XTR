@@ -6,91 +6,95 @@ cmd({
   pattern: "popkidplay",
   alias: ["ytplay", "song", "yta"],
   react: "🎵",
-  desc: "Download YouTube audio using Jawad-Tech and Noobs APIs",
+  desc: "Download YouTube audio using GiftedTech API with 1️⃣/2️⃣ options",
   category: "download",
-  use: ".play <song name or YouTube URL>",
+  use: ".popkidplay <song name or YouTube URL>",
   filename: __filename
 }, async (conn, mek, m, { from, reply, q }) => {
   try {
-    const input = q || (m.quoted && m.quoted.text?.trim());
-    if (!input) return reply("❌ Please enter a song name or YouTube link!");
+    const input = q?.trim() || "Fave Mr Man"; // default search
+    await conn.sendMessage(from, { react: { text: "🔍", key: mek.key } });
+    await reply(`🎧 Searching for: *${input}*`);
 
-    await reply("🔍 Searching YouTube...");
-
-    // Search video
+    // Search YouTube
     const search = await ytsearch(input);
     const vid = search?.results?.[0];
     if (!vid || !vid.url) return reply("❌ No results found!");
 
     const title = vid.title.replace(/[^\w\s.-]/gi, "").slice(0, 50);
     const videoUrl = vid.url;
-    const videoId = vid.videoId;
 
-    await conn.sendMessage(from, {
+    // Show song info & options
+    const infoMsg = await conn.sendMessage(from, {
       image: { url: vid.thumbnail },
       caption: `
-🎶 *Now Playing...*
+🎶 *${title}*
 
-📝 *Title:* ${vid.title}
-⏱️ *Duration:* ${vid.timestamp || "Unknown"}
-👁️ *Views:* ${vid.views || "Unknown"}
-👤 *Author:* ${vid.author?.name || "Unknown"}
+🕒 Duration: ${vid.timestamp || "Unknown"}
+👀 Views: ${vid.views || "Unknown"}
+👤 Channel: ${vid.author?.name || "Unknown"}
 
-> 🎧 *Downloading audio...*
+╭─────────────◆
+│ Reply with:
+│ 1️⃣ - Download Audio 🎧
+│ 2️⃣ - Download as Document 📄
+╰─────────────◆
 `.trim()
     }, { quoted: mek });
 
-    // Use only the two APIs you requested
-    const apis = [
-      `https://jawad-tech.vercel.app/download/ytmp3?url=${encodeURIComponent(videoUrl)}`,
-      `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(videoId)}&format=mp3`
-    ];
+    const promptId = infoMsg.key.id;
 
-    let success = false;
+    // Listen for user reply
+    const handleResponse = async (event) => {
+      const message = event.messages[0];
+      if (!message.message) return;
+      const ctx = message.message.extendedTextMessage?.contextInfo?.stanzaId;
+      if (ctx !== promptId) return;
 
-    for (const api of apis) {
+      const userText = message.message.conversation || message.message.extendedTextMessage?.text;
+      const choice = userText?.trim();
+
+      await conn.sendMessage(from, { react: { text: "⬇️", key: mek.key } });
+
       try {
-        console.log(`Trying API: ${api}`);
-        const res = await axios.get(api, { timeout: 30000 });
+        // Fetch audio
+        const api = `https://ytapi.giftedtech.co.ke/api/ytdla.php?url=${encodeURIComponent(videoUrl)}&stream=true`;
+        const res = await axios.get(api, { responseType: "arraybuffer", timeout: 60000 });
+        const buffer = Buffer.from(res.data);
 
-        // Try different formats for download link
-        let audioUrl =
-          res.data?.result?.downloadUrl ||
-          res.data?.result?.url ||
-          res.data?.url ||
-          res.data?.downloadLink ||
-          res.data?.result;
-
-        if (!audioUrl) {
-          console.warn(`No valid audio URL from ${api}`);
-          continue;
+        if (choice === "1") {
+          await conn.sendMessage(from, {
+            audio: buffer,
+            mimetype: "audio/mpeg",
+            fileName: `${title}.mp3`
+          }, { quoted: message });
+        } else if (choice === "2") {
+          await conn.sendMessage(from, {
+            document: buffer,
+            mimetype: "audio/mpeg",
+            fileName: `${title}.mp3`
+          }, { quoted: message });
+        } else {
+          return reply("❌ Invalid choice! Reply 1 or 2.", message);
         }
 
-        await conn.sendMessage(from, {
-          audio: { url: audioUrl },
-          mimetype: "audio/mpeg",
-          fileName: `${title}.mp3`,
-          ptt: false
-        }, { quoted: mek });
-
         await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
-        success = true;
-        break;
-
-      } catch (err) {
-        console.warn(`API failed: ${api} - ${err.message}`);
-        continue;
+      } catch (e) {
+        console.error(e);
+        await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
+        reply("⚠️ Failed to download. Try again later!");
       }
-    }
 
-    if (!success) {
-      await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
-      reply("🚫 All servers failed. Try again later.");
-    }
+      conn.ev.off("messages.upsert", handleResponse);
+    };
+
+    // Auto close listener after 3 minutes
+    setTimeout(() => conn.ev.off("messages.upsert", handleResponse), 180000);
+    conn.ev.on("messages.upsert", handleResponse);
 
   } catch (err) {
-    console.error("❌ Error in .play command:", err);
+    console.error("❌ Error in popkidplay:", err);
     await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
-    reply("⚠️ Something went wrong while downloading audio!");
+    reply("⚠️ Something went wrong while processing your request!");
   }
 });
