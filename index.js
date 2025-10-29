@@ -117,7 +117,7 @@ const port = process.env.PORT || 9090;
 │ Status: Ready for use
 │ Follow Channel:
 │ https://tinyurl.com/464a84hp
-╰──────────────⊷
+╰──────────────⊷*
 
 > Report any error to the dev`;
     conn.sendMessage(conn.user.id, { image: { url: `https://files.catbox.moe/kiy0hl.jpg` }, caption: up })
