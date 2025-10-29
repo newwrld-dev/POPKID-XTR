@@ -7,7 +7,7 @@ const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
 
 cmd({
-    pattern: "play",
+    pattern: "popkidplay",
     alias: ["ytplay", "ytmp3", "song", "audio", "yta"],
     react: "🎵",
     desc: "Download YouTube audio with multiple API fallbacks",
@@ -210,7 +210,7 @@ cmd({
 
 // Enhanced play4 command with multiple APIs
 cmd({ 
-    pattern: "play4", 
+    pattern: "video", 
     alias: ["ytmp4", "ytvideo", "yta4"], 
     react: "🎬", 
     desc: "Download YouTube video with multiple API fallbacks", 
