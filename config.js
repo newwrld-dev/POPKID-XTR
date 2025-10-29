@@ -1,79 +1,71 @@
 const fs = require('fs');
+const path = require('path');
 if (fs.existsSync('config.env')) require('dotenv').config({ path: './config.env' });
 
+// Import SQLite config database
+const { getConfig } = require('./lib/configdb');
+
+// Helper
+function getSetting(key, fallback) {
+    const dbValue = getConfig(key);
+    if (dbValue !== null && dbValue !== undefined) return dbValue;
+    if (process.env[key] !== undefined) return process.env[key];
+    return fallback;
+}
+
+// Convert string bools to actual booleans when needed
 function convertToBool(text, fault = 'true') {
     return text === fault ? true : false;
 }
+
 module.exports = {
-SESSION_ID: process.env.SESSION_ID || "popkid-session",
-// add your Session Id 
-AUTO_STATUS_SEEN: process.env.AUTO_STATUS_SEEN || "true",
-// make true or false status auto seen
-AUTO_STATUS_REPLY: process.env.AUTO_STATUS_REPLY || "false",
-// make true if you want auto reply on status 
-AUTO_BIO: process.env.AUTO_BIO || "true", // ture to get auto bio 
-AUTO_STATUS_REACT: process.env.AUTO_STATUS_REACT || "true",
-// make true if you want auto reply on status 
-AUTO_STATUS_MSG: process.env.AUTO_STATUS_MSG || ".𝗦𝗘𝗘𝗡 𝗬𝗢𝗨𝗥 𝗦𝗧𝗔𝗧𝗨𝗦 𝗕𝗬 𝗣𝗢𝗣𝗞𝗜𝗗 𝗫𝗧𝗥🔄",
-// set the auto reply massage on status reply  
-ANTI_LINK: process.env.ANTI_LINK || "true",
-// make anti link true,false for groups 
-MENTION_REPLY: process.env.MENTION_REPLY || "true",
-// make true if want auto voice reply if someone menetion you 
-MENU_IMAGE_URL: process.env.MENU_IMAGE_URL || "https://files.catbox.moe/kiy0hl.jpg",
-// add custom menu and mention reply image url
-PREFIX: process.env.PREFIX || ".",
-// add your prifix for bot   
-BOT_NAME: process.env.BOT_NAME || "POPKID-MD",
-// add bot namw here for menu
-STICKER_NAME: process.env.STICKER_NAME || "POPKID-MD",
-// type sticker pack name 
-CUSTOM_REACT: process.env.CUSTOM_REACT || "true",
-// make this true for custum emoji react    
-CUSTOM_REACT_EMOJIS: process.env.CUSTOM_REACT_EMOJIS || "💝,💖,💗,❤️‍🩹,❤️,🧡,💛,💚,💙,💜,🤎,🖤,🤍",
-// chose custom react emojis by yourself 
-DELETE_LINKS: process.env.DELETE_LINKS || "false",
-// automatic delete links witho remove member 
-OWNER_NUMBER: process.env.OWNER_NUMBER || "254732297194",
-// add your bot owner number
-OWNER_NAME: process.env.OWNER_NAME || "POPKID",
-// add bot owner name
-DESCRIPTION: process.env.DESCRIPTION || "*© popkid xtr bot*",
-// add bot owner name    
-ALIVE_IMG: process.env.ALIVE_IMG || "https://files.catbox.moe/n8o8py.jpg",
-// add img for alive msg
-LIVE_MSG: process.env.LIVE_MSG || ">POPKID MD IS ALIVE😍",
-// add alive msg here 
-READ_MESSAGE: process.env.READ_MESSAGE || "false",
-// Turn true or false for automatic read msgs
-AUTO_REACT: process.env.AUTO_REACT || "true",
-// make this true or false for auto react on all msgs
-ANTI_BAD: process.env.ANTI_BAD || "true",
-// false or true for anti bad words  
-MODE: process.env.MODE || "public",
-// make bot public-private-inbox-group 
-ANTI_LINK_KICK: process.env.ANTI_LINK_KICK || "false",
-// make anti link true,false for groups 
-AUTO_VOICE: process.env.AUTO_VOICE || "true",
-// make true for send automatic voices
-AUTO_STICKER: process.env.AUTO_STICKER || "false",
-// make true for automatic stickers 
-AUTO_REPLY: process.env.AUTO_REPLY || "true",
-// make true or false automatic text reply 
-ALWAYS_ONLINE: process.env.ALWAYS_ONLINE || "false",
-// maks true for always online 
-PUBLIC_MODE: process.env.PUBLIC_MODE || "true",
-// make false if want private mod
-AUTO_TYPING: process.env.AUTO_TYPING || "true",
-// true for automatic show typing   
-READ_CMD: process.env.READ_CMD || "false",
-// true if want mark commands as read 
-DEV: process.env.DEV || "254732297194",
-//replace with your whatsapp number        
-ANTI_VV: process.env.ANTI_VV || "true",
-// true for anti once view 
-ANTI_DEL_PATH: process.env.ANTI_DEL_PATH || "log", 
-// change it to 'same' if you want to resend deleted message in same chat 
-AUTO_RECORDING: process.env.AUTO_RECORDING || "true"
-// make it true for auto recoding 
+    SESSION_ID: getSetting("SESSION_ID", "popkid-session"),
+
+    AUTO_STATUS_SEEN: getSetting("AUTO_STATUS_SEEN", "true"),
+    AUTO_STATUS_REPLY: getSetting("AUTO_STATUS_REPLY", "false"),
+    AUTO_BIO: getSetting("AUTO_BIO", "true"),
+    AUTO_STATUS_REACT: getSetting("AUTO_STATUS_REACT", "true"),
+    AUTO_STATUS_MSG: getSetting("AUTO_STATUS_MSG", ".𝗦𝗘𝗘𝗡 𝗬𝗢𝗨𝗥 𝗦𝗧𝗔𝗧𝗨𝗦 𝗕𝗬 𝗣𝗢𝗣𝗞𝗜𝗗 𝗫𝗧𝗥🔄"),
+
+    ANTI_LINK: getSetting("ANTI_LINK", "true"),
+    MENTION_REPLY: getSetting("MENTION_REPLY", "true"),
+    MENU_IMAGE_URL: getSetting("MENU_IMAGE_URL", "https://files.catbox.moe/kiy0hl.jpg"),
+
+    PREFIX: getSetting("PREFIX", "."),
+    BOT_NAME: getSetting("BOT_NAME", "POPKID-MD"),
+    STICKER_NAME: getSetting("STICKER_NAME", "POPKID-MD"),
+
+    CUSTOM_REACT: getSetting("CUSTOM_REACT", "true"),
+    CUSTOM_REACT_EMOJIS: getSetting("CUSTOM_REACT_EMOJIS", "💝,💖,💗,❤️‍🩹,❤️,🧡,💛,💚,💙,💜,🤎,🖤,🤍"),
+
+    DELETE_LINKS: getSetting("DELETE_LINKS", "false"),
+
+    OWNER_NUMBER: getSetting("OWNER_NUMBER", "254732297194"),
+    OWNER_NAME: getSetting("OWNER_NAME", "POPKID"),
+    DESCRIPTION: getSetting("DESCRIPTION", "*© popkid xtr bot*"),
+
+    ALIVE_IMG: getSetting("ALIVE_IMG", "https://files.catbox.moe/n8o8py.jpg"),
+    LIVE_MSG: getSetting("LIVE_MSG", ">POPKID MD IS ALIVE😍"),
+
+    READ_MESSAGE: getSetting("READ_MESSAGE", "false"),
+    AUTO_REACT: getSetting("AUTO_REACT", "true"),
+    ANTI_BAD: getSetting("ANTI_BAD", "true"),
+
+    MODE: getSetting("MODE", "public"),
+    ANTI_LINK_KICK: getSetting("ANTI_LINK_KICK", "false"),
+
+    AUTO_VOICE: getSetting("AUTO_VOICE", "true"),
+    AUTO_STICKER: getSetting("AUTO_STICKER", "false"),
+    AUTO_REPLY: getSetting("AUTO_REPLY", "true"),
+
+    ALWAYS_ONLINE: getSetting("ALWAYS_ONLINE", "false"),
+    PUBLIC_MODE: getSetting("PUBLIC_MODE", "true"),
+    AUTO_TYPING: getSetting("AUTO_TYPING", "true"),
+    READ_CMD: getSetting("READ_CMD", "false"),
+
+    DEV: getSetting("DEV", "254732297194"),
+
+    ANTI_VV: getSetting("ANTI_VV", "true"),
+    ANTI_DEL_PATH: getSetting("ANTI_DEL_PATH", "log"),
+    AUTO_RECORDING: getSetting("AUTO_RECORDING", "true"),
 };
