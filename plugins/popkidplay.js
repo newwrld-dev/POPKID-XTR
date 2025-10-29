@@ -3,7 +3,7 @@ const { cmd } = require("../command");
 const { ytsearch } = require("@dark-yasiya/yt-dl.js");
 
 cmd({
-  pattern: "popkidplay",
+  pattern: "play",
   alias: ["ytplay", "song", "yta"],
   react: "🎵",
   desc: "Download YouTube audio using GiftedTech API",
