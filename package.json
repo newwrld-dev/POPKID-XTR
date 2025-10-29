@@ -3,10 +3,11 @@
   "version": "3.0.0",
   "description": "A WhatsApp Bot Created By POPKID",
   "main": "index.js",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
-    "start": "pm2 start index.js --deep-monitoring --attach --name POPKID-XTR",
-    "stop": "pm2 stop POPKID-XTR",
-    "restart": "pm2 restart POPKID-XTR"
+    "start": "node index.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "github:Drayyyxd/XD-Baileys",
