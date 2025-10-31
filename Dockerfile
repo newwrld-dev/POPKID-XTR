@@ -1,16 +1,7 @@
 FROM node:lts-buster
-
-# Clone bot from GitHub
-RUN git clone https://github.com/newwrld-dev/POPKID-XTR.git /root/popkid-xtr-bot
-
-# Set working directory
-WORKDIR /root/popkid-xtr-bot
-
-# Install dependencies
-RUN npm install && npm install -g pm2
-
-# Expose port
+RUN git clone https://github.com/JawadYT36/KHAN-MD/root/ikJawad
+WORKDIR /root/ikJawad
+RUN npm install && npm install -g pm2 || yarn install --network-concurrency 1
+COPY . .
 EXPOSE 9090
-
-# Start the bot
 CMD ["npm", "start"]
