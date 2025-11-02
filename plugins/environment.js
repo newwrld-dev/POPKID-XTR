@@ -358,8 +358,8 @@ async (conn, mek, m, { from, args, isCreator, reply }) => {
 //   AUTO-REACT COMMANDS
 //--------------------------------------------
 cmd({
-    pattern: "auto-react",
-    alias: ["autoreact"],
+    pattern: "auto-react1",
+    alias: ["autoreact1"],
     desc: "Enable or disable the autoreact feature",
     category: "settings",
     filename: __filename
