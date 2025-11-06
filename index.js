@@ -23,7 +23,8 @@ const {
   
   
   const l = console.log
-  const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson } = require('./lib/functions')
+  // NOTE: Removed 'loadSession' from imports as its logic is now embedded below.
+  const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson } = require('./lib/functions') 
   const { AntiDelDB, initializeAntiDeleteSettings, setAnti, getAnti, getAllAntiDeleteSettings, saveContact, loadMessage, getName, getChatSummary, saveGroupMetadata, getGroupMetadata, saveMessageCount, getInactiveGroupMembers, getGroupMembersMessageCount, saveMessage } = require('./data')
   const fs = require('fs')
   const ff = require('fluent-ffmpeg')
@@ -41,6 +42,7 @@ const {
   const os = require('os')
   const Crypto = require('crypto')
   const path = require('path')
+  const zlib = require('zlib'); // ⚠️ NEW: Need zlib for decompression
   const prefix = config.PREFIX
   
   const ownerNumber = ['254732297194']
@@ -64,24 +66,62 @@ const {
   // Clear the temp directory every 5 minutes
   setInterval(clearTempDir, 5 * 60 * 1000);
   
-  //===================SESSION-AUTH============================
-if (!fs.existsSync(__dirname + '/sessions/creds.json')) {
-if(!config.SESSION_ID) return console.log('Please add your session to SESSION_ID env !!')
-const sessdata = config.SESSION_ID.replace("POPKID;;;", '');
-const filer = File.fromURL(`https://mega.nz/file/${sessdata}`)
-filer.download((err, data) => {
-if(err) throw err
-fs.writeFile(__dirname + '/sessions/creds.json', data, () => {
-console.log("SESSIO-ID CONNECTED 🙂")
-})})}
-
+  
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 9090;
   
-  //=============================================
-  
-  async function connectToWA() {
+//================================================================
+
+/**
+ * Handles session loading and initiates the WhatsApp connection.
+ */
+async function startBot() {
+    const sessionDir = path.join(__dirname, 'sessions');
+    const sessionPath = path.join(sessionDir, 'creds.json');
+    
+    // ⚠️ NEW SESSION LOADING LOGIC
+    if (!fs.existsSync(sessionPath)) {
+        console.log('Session file not found. Attempting to load from SESSION_ID...');
+        try {
+            if (!config.SESSION_ID || typeof config.SESSION_ID !== 'string') {  
+                throw new Error("❌ SESSION_ID is missing or invalid");  
+            }  
+
+            const [header, b64data] = config.SESSION_ID.split('~');  
+
+            if (header !== "POPKID" || !b64data) {  
+                throw new Error("❌ Invalid session format. Expected 'POPKID~.....'");  
+            }  
+
+            const cleanB64 = b64data.replace('...', '');  
+            const compressedData = Buffer.from(cleanB64, 'base64');  
+            const decompressedData = zlib.gunzipSync(compressedData);  
+
+            if (!fs.existsSync(sessionDir)) {  
+                fs.mkdirSync(sessionDir, { recursive: true });  
+            }  
+
+            fs.writeFileSync(sessionPath, decompressedData, "utf8");  
+            console.log("✅ Session File Loaded to /sessions/creds.json"); 
+        
+        } catch (e) {  
+            console.error("❌ Session Error:", e.message); 
+            console.error("Please ensure SESSION_ID is set correctly in the format: POPKID~<base64_data>"); 
+            process.exit(1); 
+        }
+    } else {
+        console.log("Existing session file found. Skipping SESSION_ID load.");
+    }
+    
+    // Proceed with connection
+    setTimeout(() => {
+        connectToWA();
+    }, 4000);
+}
+
+
+async function connectToWA() {
   console.log("POPKID BOT STARTED....🥰");
   const { state, saveCreds } = await useMultiFileAuthState(__dirname + '/sessions/')
   var { version } = await fetchLatestBaileysVersion()
@@ -96,8 +136,7 @@ const port = process.env.PORT || 9090;
           })
       
   const { DisconnectReason } = require("@whiskeysockets/baileys");
-const fs = require("fs");
-const path = require("path");
+// Removed duplicate fs and path requires
 
 conn.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect } = update;
@@ -689,6 +728,7 @@ if (!isReact && senderNumber === botNumber) {
              *
              * @param {*} jid
              * @param {*} path
+             * @param {*} caption
              * @param {*} quoted
              * @param {*} options
              * @returns
@@ -861,6 +901,6 @@ if (!isReact && senderNumber === botNumber) {
   res.send("POPKID XMD STARTED ✅");
   });
   app.listen(port, () => console.log(`Server listening on port http://localhost:${port}`));
-  setTimeout(() => {
-  connectToWA()
-  }, 4000);
+  
+// ⚠️ NEW: Call the startBot function
+startBot();
