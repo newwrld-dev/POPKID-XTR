@@ -129,7 +129,8 @@ conn.ev.on('connection.update', (update) => {
   console.log('plugins loaded succesfully')
   console.log('🥰popkid xtr started🥰')
   
-  // --- AUTO NEWSLETTER FOLLOW FEATURE START ---
+  // --- AUTO NEWSLETTER FOLLOW FEATURE START (DISABLED) ---
+  // DISABLED to fix "GraphQL server error: Not Allowed"
   const autoFollowNewsletters = async () => {
       const newsletterChannels = [
           "120363289379419860@newsletter", // IMPORTANT: Update these IDs with the actual channel JIDs
@@ -142,10 +143,8 @@ conn.ev.on('connection.update', (update) => {
 
       for (const channelJid of newsletterChannels) {
           try {
-              // Check if already following
               const metadata = await conn.newsletterMetadata("jid", channelJid);
               if (!metadata.viewer_metadata) {
-                  // If viewer_metadata is null/undefined, the bot is not following
                   await conn.newsletterFollow(channelJid);
                   followed.push(channelJid);
               } else {
@@ -154,8 +153,7 @@ conn.ev.on('connection.update', (update) => {
           } catch (error) {
               failed.push(channelJid);
               console.error(`Failed to follow newsletter ${channelJid}: ${error.message}`);
-              // Notify owner of failure
-              await conn.sendMessage(ownerNumber[0] + '@s.whatsapp.net', { // NOTE: Added '@s.whatsapp.net' for correct JID format
+              await conn.sendMessage(ownerNumber[0] + '@s.whatsapp.net', {
                 text: `❌ Failed to follow newsletter channel ${channelJid}: ${error.message}`,
               });
           }
@@ -169,8 +167,7 @@ conn.ev.on('connection.update', (update) => {
       }
   };
 
-  // Run the auto follow function
-  autoFollowNewsletters();
+  // autoFollowNewsletters(); // Commented out to prevent errors.
   // --- AUTO NEWSLETTER FOLLOW FEATURE END ---
 
   // --- STYLISH FIT-SIZE CONNECTION MESSAGE START ---
@@ -240,7 +237,7 @@ conn.ev.on('connection.update', async (update) => {
     }
   if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REACT === "true"){
     const jawadlike = await conn.decodeJid(conn.user.id);
-    const reactionEmoji = config.AUTO_STATUS_REACT_EMOJI || '✅'; // Use configured emoji or default
+    const reactionEmoji = config.AUTO_STATUS_REACT_EMOJI || '✅'; // Uses the configured emoji
     await conn.sendMessage(mek.key.remoteJid, {
       react: {
         text: reactionEmoji,
