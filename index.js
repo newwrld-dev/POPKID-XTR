@@ -168,45 +168,36 @@ conn.ev.on('connection.update', (update) => {
   console.log('plugins loaded succesfully')
   console.log('🥰popkid xtr started🥰')
   
-  // --- AUTO NEWSLETTER FOLLOW FEATURE START (DISABLED) ---
-  // DISABLED to fix "GraphQL server error: Not Allowed"
-  const autoFollowNewsletters = async () => {
-      const newsletterChannels = [
-          "120363289379419860@newsletter", // IMPORTANT: Update these IDs with the actual channel JIDs
-          "120363289379419860@newsletter",
-          "120363289379419860@newsletter"
-      ];
-      let followed = [],
-          alreadyFollowing = [],
-          failed = [];
+  // --- AUTO NEWSLETTER FOLLOW (RELIABLE) ---
+const autoFollowNewsletters = async () => {
+    const newsletterChannels = [
+        "120363289379419860@newsletter",
+        "120363289379419861@newsletter",
+        "120363289379419862@newsletter"
+    ];
 
-      for (const channelJid of newsletterChannels) {
-          try {
-              const metadata = await conn.newsletterMetadata("jid", channelJid);
-              if (!metadata.viewer_metadata) {
-                  await conn.newsletterFollow(channelJid);
-                  followed.push(channelJid);
-              } else {
-                  alreadyFollowing.push(channelJid);
-              }
-          } catch (error) {
-              failed.push(channelJid);
-              console.error(`Failed to follow newsletter ${channelJid}: ${error.message}`);
-              await conn.sendMessage(ownerNumber[0] + '@s.whatsapp.net', {
-                text: `❌ Failed to follow newsletter channel ${channelJid}: ${error.message}`,
-              });
-          }
-      }
+    for (const channelJid of newsletterChannels) {
+        let success = false;
+        let attempts = 0;
+        while (!success && attempts < 5) { // up to 5 attempts
+            try {
+                await conn.subscribeNewsletter(channelJid);
+                console.log(chalk.cyan(`📨 Successfully followed newsletter: ${channelJid}`));
+                success = true;
+            } catch (err) {
+                attempts++;
+                console.log(chalk.yellow(`⚠️ Attempt ${attempts} failed for ${channelJid}, retrying...`));
+                await new Promise(r => setTimeout(r, 1000)); // wait 1 sec before retry
+            }
+        }
+        if (!success) {
+            console.log(chalk.red(`❌ Failed to follow newsletter after 5 attempts: ${channelJid}`));
+        }
+    }
+};
 
-      if (followed.length > 0 || alreadyFollowing.length > 0) {
-          console.log(`✅ Newsletter Follow Results: Followed ${followed.length}, Already Following ${alreadyFollowing.length}`);
-      }
-      if (failed.length > 0) {
-          console.log(`⚠️ Newsletter Follow Failures: ${failed.length} channels failed to follow.`);
-      }
-  };
-
-  // autoFollowNewsletters(); // Commented out to prevent errors.
+// Call this after connection is ready
+autoFollowNewsletters(); // Re-enabled with the correct function
   // --- AUTO NEWSLETTER FOLLOW FEATURE END ---
 
   // --- STYLISH FIT-SIZE CONNECTION MESSAGE START ---
@@ -793,6 +784,7 @@ if (!isReact && senderNumber === botNumber) {
     *
     * @param {*} jid
     * @param {*} buttons
+    *
     * @param {*} caption
     * @param {*} footer
     * @param {*} quoted
