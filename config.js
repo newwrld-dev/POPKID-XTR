@@ -38,14 +38,14 @@ module.exports = {
 
     // --- REACTION SETTINGS ---
     AUTO_REACT: process.env.AUTO_REACT || "false", // Auto react on all messages
-    CUSTOM_REACT: process.env.CUSTOM_REACT || "true", // Enable custom emoji react
+    CUSTOM_REACT: process.env.CUSTOM_REACT || "false", // Enable custom emoji react
     CUSTOM_REACT_EMOJIS: process.env.CUSTOM_REACT_EMOJIS || "💝,💖,💗,❤️‍🩹,❤️,🧡,💛,💚,💙,💜,🤎,🖤,🤍", // Custom react emojis
     
     // --- STATUS SETTINGS ---
     AUTO_STATUS_SEEN: process.env.AUTO_STATUS_SEEN || "true", // Auto view statuses
     AUTO_STATUS_REACT: process.env.AUTO_STATUS_REACT || "true", // Auto react on statuses
     AUTO_STATUS_REACT_EMOJI: process.env.AUTO_STATUS_REACT_EMOJI || "❎", // Custom status reaction emoji (New)
-    AUTO_STATUS_REPLY: process.env.AUTO_STATUS_REPLY || "true", // Auto reply on status (Enabled)
+    AUTO_STATUS_REPLY: process.env.AUTO_STATUS_REPLY || "false", // Auto reply on status (Enabled)
     AUTO_STATUS_MSG: process.env.AUTO_STATUS_MSG || ".𝗦𝗘𝗘𝗡 𝗬𝗢𝗨𝗥 𝗦𝗧𝗔𝗧𝗨𝗦 𝗕𝗬 𝗣𝗢𝗣𝗞𝗜𝗗 𝗫𝗧𝗥🔄", // Status reply message
     
     // --- GROUP & SECURITY ---
