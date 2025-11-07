@@ -1,3 +1,5 @@
+const chalk = require('chalk'); // 🟢 FIX: Added missing chalk import
+
 const {
   default: makeWASocket,
     useMultiFileAuthState,
@@ -182,16 +184,19 @@ const autoFollowNewsletters = async () => {
         while (!success && attempts < 5) { // up to 5 attempts
             try {
                 await conn.subscribeNewsletter(channelJid);
-                console.log(chalk.cyan(`📨 Successfully followed newsletter: ${channelJid}`));
+                // 🟢 FIX APPLIED: chalk is now defined
+                console.log(chalk.cyan(`📨 Successfully followed newsletter: ${channelJid}`)); 
                 success = true;
             } catch (err) {
                 attempts++;
-                console.log(chalk.yellow(`⚠️ Attempt ${attempts} failed for ${channelJid}, retrying...`));
+                // 🟢 FIX APPLIED: chalk is now defined
+                console.log(chalk.yellow(`⚠️ Attempt ${attempts} failed for ${channelJid}, retrying...`)); 
                 await new Promise(r => setTimeout(r, 1000)); // wait 1 sec before retry
             }
         }
         if (!success) {
-            console.log(chalk.red(`❌ Failed to follow newsletter after 5 attempts: ${channelJid}`));
+            // 🟢 FIX APPLIED: chalk is now defined
+            console.log(chalk.red(`❌ Failed to follow newsletter after 5 attempts: ${channelJid}`)); 
         }
     }
 };
@@ -540,7 +545,6 @@ if (!isReact && senderNumber === botNumber) {
                   if (mime.split("/")[1] === "gif") {
                     return conn.sendMessage(jid, { video: await getBuffer(url), caption: caption, gifPlayback: true, ...options }, { quoted: quoted, ...options })
                   }
-                  let type = mime.split("/")[0] + "Message"
                   if (mime === "application/pdf") {
                     return conn.sendMessage(jid, { document: await getBuffer(url), mimetype: 'application/pdf', caption: caption, ...options }, { quoted: quoted, ...options })
                   }
