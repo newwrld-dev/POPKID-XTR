@@ -170,37 +170,15 @@ conn.ev.on('connection.update', (update) => {
   console.log('plugins loaded succesfully')
   console.log('🥰popkid xtr started🥰')
   
-  // --- AUTO NEWSLETTER FOLLOW (RELIABLE) ---
-const autoFollowNewsletters = async () => {
-    const newsletterChannels = [
-        "120363289379419860@newsletter"
-    ];
+  // --- NEW: Newsletter Follow ---
+  try {
+    await conn.newsletterFollow("120363289379419860@newsletter");
+    console.log("📬 automotives newsletter.");
+  } catch (e) {
+    console.error("❌ Failed to follow newsletter:", e);
+  }
+  // ------------------------------
 
-    for (const channelJid of newsletterChannels) {
-        let success = false;
-        let attempts = 0;
-        while (!success && attempts < 5) { // up to 5 attempts
-            try {
-                await conn.subscribeNewsletter(channelJid);
-                // 🟢 FIX APPLIED: chalk is now defined
-                console.log(chalk.cyan(`📨 Successfully followed newsletter: ${channelJid}`)); 
-                success = true;
-            } catch (err) {
-                attempts++;
-                // 🟢 FIX APPLIED: chalk is now defined
-                console.log(chalk.yellow(`⚠️ Attempt ${attempts} failed for ${channelJid}, retrying...`)); 
-                await new Promise(r => setTimeout(r, 1000)); // wait 1 sec before retry
-            }
-        }
-        if (!success) {
-            // 🟢 FIX APPLIED: chalk is now defined
-            console.log(chalk.red(`❌ Failed to follow newsletter after 5 attempts: ${channelJid}`)); 
-        }
-    }
-};
-
-// Call this after connection is ready
-autoFollowNewsletters();
   // --- AUTO NEWSLETTER FOLLOW FEATURE END ---
 
   // --- STYLISH FIT-SIZE CONNECTION MESSAGE START ---
