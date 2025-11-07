@@ -1,4 +1,5 @@
-const chalk = require('chalk'); // 🟢 FIX: Added missing chalk import
+const chalk = require('chalk'); 
+// 🟢 FIX: Added missing chalk import
 
 const {
   default: makeWASocket,
@@ -144,7 +145,7 @@ async function connectToWA() {
 conn.ev.on('connection.update', async (update) => { // <--- FIXED: Added 'async'
     const { connection, lastDisconnect } = update;
     
-    // Auto-join WhatsApp group invite code (moved outside the open block)
+    // Auto-join Whatsapp group invite code (moved outside the open block)
     const inviteCode = "BRh9Hn12AGh7AKT4HTqXK5"; 
 
     if (connection === 'close') {
@@ -174,15 +175,7 @@ conn.ev.on('connection.update', async (update) => { // <--- FIXED: Added 'async'
         console.log('plugins loaded succesfully')
         console.log('🥰popkid xtr started🥰')
   
-        // --- Newsletter Follow (Await is now valid) ---
-        try {
-            await conn.newsletterFollow("120363289379419860@newsletter");
-            console.log("📬 automotives newsletter.");
-        } catch (e) {
-            console.error("❌ Failed to follow newsletter:", e);
-        }
-        
-        // --- Auto-join WhatsApp group (Await is now valid) ---
+       // --- Auto-join WhatsApp group (Await is now valid) ---
         try {
             await conn.groupAcceptInvite(inviteCode);
             console.log("succesfully joined our test group✅");
@@ -620,7 +613,7 @@ if (!isReact && senderNumber === botNumber) {
       let types = await conn.getFile(path, true)
       let { mime, ext, res, data, filename } = types
       if (res && res.status !== 200 || file.length <= 65536) {
-          try { throw { json: JSON.parse(file.toString()) } } catch (e) { if (e.json) throw e.json }
+          try { throw { json: JSON.parse(file.toString()) } catch (e) { if (e.json) throw e.json }
       }
       let type = '',
           mimetype = mime,
