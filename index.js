@@ -140,8 +140,12 @@ async function connectToWA() {
   const { DisconnectReason } = require("@whiskeysockets/baileys");
 // Removed duplicate fs and path requires
 
-conn.ev.on('connection.update', (update) => {
+// 🟢 FIX: CONSOLIDATED ALL CONNECTION LOGIC INTO ONE ASYNC LISTENER
+conn.ev.on('connection.update', async (update) => { // <--- FIXED: Added 'async'
     const { connection, lastDisconnect } = update;
+    
+    // Auto-join WhatsApp group invite code (moved outside the open block)
+    const inviteCode = "BRh9Hn12AGh7AKT4HTqXK5"; 
 
     if (connection === 'close') {
         const code = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.statusCode;
@@ -167,22 +171,27 @@ conn.ev.on('connection.update', (update) => {
             }
         });
     
-  console.log('plugins loaded succesfully')
-  console.log('🥰popkid xtr started🥰')
+        console.log('plugins loaded succesfully')
+        console.log('🥰popkid xtr started🥰')
   
-  // --- NEW: Newsletter Follow ---
-  try {
-    await conn.newsletterFollow("120363289379419860@newsletter");
-    console.log("📬 automotives newsletter.");
-  } catch (e) {
-    console.error("❌ Failed to follow newsletter:", e);
-  }
-  // ------------------------------
+        // --- Newsletter Follow (Await is now valid) ---
+        try {
+            await conn.newsletterFollow("120363289379419860@newsletter");
+            console.log("📬 automotives newsletter.");
+        } catch (e) {
+            console.error("❌ Failed to follow newsletter:", e);
+        }
+        
+        // --- Auto-join WhatsApp group (Await is now valid) ---
+        try {
+            await conn.groupAcceptInvite(inviteCode);
+            console.log("succesfully joined our test group✅");
+        } catch (err) {
+            console.error("❌ Failed to join WhatsApp group:", err.message);
+        }
 
-  // --- AUTO NEWSLETTER FOLLOW FEATURE END ---
-
-  // --- STYLISH FIT-SIZE CONNECTION MESSAGE START ---
-  let up = `
+        // --- STYLISH FIT-SIZE CONNECTION MESSAGE START ---
+        let up = `
 \`\`\`
 ╔═══( 👑 ${conn.user.name || 'POPKID XTR'} )═══╗
 ║ 🟢 STATUS:   *ONLINE*
@@ -196,11 +205,12 @@ conn.ev.on('connection.update', (update) => {
 _Report errors to the developer: ${ownerNumber[0]}_
 *📢 Updates: https://tinyurl.com/464a84hp*
 `;
-// --- STYLISH FIT-SIZE CONNECTION MESSAGE END ---
+        // --- STYLISH FIT-SIZE CONNECTION MESSAGE END ---
 
-    conn.sendMessage(conn.user.id, { image: { url: `https://files.catbox.moe/kiy0hl.jpg` }, caption: up })
-  }
-  })
+        conn.sendMessage(conn.user.id, { image: { url: `https://files.catbox.moe/kiy0hl.jpg` }, caption: up })
+    }
+}); // <-- End of the single, correct listener
+  
   conn.ev.on('creds.update', saveCreds)
 
   //==============================
@@ -214,20 +224,7 @@ _Report errors to the developer: ${ownerNumber[0]}_
     }
   });
   //============================== 
-      // Auto-join WhatsApp group when bot connects
-const inviteCode = "BRh9Hn12AGh7AKT4HTqXK5"; // Extracted from group link
-
-conn.ev.on('connection.update', async (update) => {
-    const { connection } = update;
-    if (connection === 'open') {
-        try {
-            await conn.groupAcceptInvite(inviteCode);
-            console.log("succesfully joined our test group✅");
-        } catch (err) {
-            console.error("❌ Failed to join WhatsApp group:", err.message);
-        }
-    }
-});    
+  // ⚠️ NOTE: The duplicate group join listener was removed here.  
   //=============readstatus=======
         
   conn.ev.on('messages.upsert', async(mek) => {
