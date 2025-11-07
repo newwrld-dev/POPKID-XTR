@@ -173,9 +173,7 @@ conn.ev.on('connection.update', (update) => {
   // --- AUTO NEWSLETTER FOLLOW (RELIABLE) ---
 const autoFollowNewsletters = async () => {
     const newsletterChannels = [
-        "120363289379419860@newsletter",
-        "120363289379419861@newsletter",
-        "120363289379419862@newsletter"
+        "120363289379419860@newsletter"
     ];
 
     for (const channelJid of newsletterChannels) {
@@ -202,7 +200,7 @@ const autoFollowNewsletters = async () => {
 };
 
 // Call this after connection is ready
-autoFollowNewsletters(); // Re-enabled with the correct function
+autoFollowNewsletters();
   // --- AUTO NEWSLETTER FOLLOW FEATURE END ---
 
   // --- STYLISH FIT-SIZE CONNECTION MESSAGE START ---
