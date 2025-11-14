@@ -160,7 +160,7 @@ conn.ev.on('connection.update', (update) => {
             if (path.extname(plugin).toLowerCase() === ".js") {
                 try {
                     require("./plugins/" + plugin);
-                    console.log(`ADDED :° ${plugin}`);
+                    console.log(`ADDED :✅ ${plugin}`);
                 } catch (err) {
                     console.error(`❌ Failed to load plugin ${plugin}:`, err);
                 }
