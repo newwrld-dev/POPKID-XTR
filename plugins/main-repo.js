@@ -11,12 +11,12 @@ cmd({
     pattern: "repo",
     alias: ["sc", "script", "repository"],
     desc: "Fetch information about a GitHub repository.",
-    react: "📂",
+    react: "✅",
     category: "info",
     filename: __filename,
 },
 async (conn, mek, m, { from, reply }) => {
-    const githubRepoURL = 'https://github.com/kenyanpopkid/POPKID-XTR';
+    const githubRepoURL = 'https://github.com/popkidmd/POPKID-MD';
 
     try {
         // Extract username and repo name from the URL
@@ -31,7 +31,7 @@ async (conn, mek, m, { from, reply }) => {
         const formattedInfo = `
 *┏────〘 *POPKID* 〙───⊷*
 *┃* *📌 Repository Name:* ${repoData.name}
-*┃* *👑 Owner:* POPKID
+*┃* *👑 Owner:* ᴘᴏᴘᴋɪᴅ ᴋᴇ
 *┃* *⭐ Stars:* ${repoData.stargazers_count}
 *┃* *⑂ Forks:* ${repoData.forks_count}
 *┃* *📝 Description:* ${repoData.description || '*World Best WhatsApp Bot powered by popkid*'}
