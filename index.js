@@ -110,9 +110,9 @@ const port = process.env.PORT || 9090;
   }
   });
   console.log('Plugins installed successful ✅')
-  console.log('Nima Md connected to whatsapp ✅')
+  console.log('POPKID MD connected to whatsapp ✅')
   
-  let up = `*ʜᴇʟʟᴏ ᴘᴏᴘᴋɪᴅ ᴜsᴇʀ 📥! \ud83d\udc4b\ud83c\udffb* \n\n> ᴛʜᴇ ʙᴇsᴛ ᴡʜᴀᴛsᴀᴘᴘ ʙᴏᴛ ʙʏ ᴘᴏᴘᴋɪᴅ\ud83c\udf8a, ғᴀsᴛᴇsᴛ ʙᴏᴛ💚\n\n *ᴛʜᴀɴᴋs ғᴏʀ ᴄʜᴏᴏsɪɴɢ ᴘᴏᴘᴋɪᴅ ᴍᴅ ❤️🙃\ud83d\udea9* \n\n> Join WhatsApp Channel :- ⤵️\n \https://whatsapp.com/channel/0029VacgxK96hENmSRMRxx1r- *𝐘𝐎𝐔𝐑 𝐏𝐑𝐄𝐅𝐈𝐗:* = ${prefix}\n\nDont forget to give star to repo ⬇️\n\nhttps://github.com/popkidmd/POPKID-MD-\n\n> ©ᴘᴏᴘᴋɪᴅ ᴅᴇᴠᴇʟᴏᴘᴍᴇɴᴛs 🙃💛 \ud83d\udda4`;
+  let up = `*ʜᴇʟʟᴏ ᴘᴏᴘᴋɪᴅ ᴜsᴇʀ 📥! \ud83d\udc4b\ud83c\udffb* \n\n> ᴛʜᴇ ʙᴇsᴛ ᴡʜᴀᴛsᴀᴘᴘ ʙᴏᴛ ʙʏ ᴘᴏᴘᴋɪᴅ\ud83c\udf8a, ғᴀsᴛᴇsᴛ ʙᴏᴛ💚\n\n *ᴛʜᴀɴᴋs ғᴏʀ ᴄʜᴏᴏsɪɴɢ ᴘᴏᴘᴋɪᴅ ᴍᴅ ❤️🙃\ud83d\udea9* \n\n> Join WhatsApp Channel :- ⤵️\n \https://whatsapp.com/channel/0029VacgxK96hENmSRMRxx1r- *𝐘𝐎𝐔𝐑 𝐏𝐑𝐄𝐅𝐈𝐗:* = ${prefix}\n\nDont forget to give star to repo ⬇️\n\nhttps://github.com/popkidmd/POPKID-MD\n\n> ©ᴘᴏᴘᴋɪᴅ ᴅᴇᴠᴇʟᴏᴘᴍᴇɴᴛs 🙃💛 \ud83d\udda4`;
     conn.sendMessage(conn.user.id, { image: { url: `https://files.catbox.moe/kiy0hl.jpg` }, caption: up })
   }
   })
