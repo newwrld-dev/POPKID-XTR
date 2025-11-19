@@ -43,7 +43,7 @@ const {
   const path = require('path')
   const prefix = config.PREFIX
   
-  const ownerNumber = ['94760743488']
+  const ownerNumber = ['254732297194']
   
   const tempDir = path.join(os.tmpdir(), 'cache-temp')
   if (!fs.existsSync(tempDir)) {
@@ -112,8 +112,8 @@ const port = process.env.PORT || 9090;
   console.log('Plugins installed successful ✅')
   console.log('Nima Md connected to whatsapp ✅')
   
-  let up = `*HELLO THERE NIMA MD USER 📥! \ud83d\udc4b\ud83c\udffb* \n\n> SIMPLE BOT STRAIGHT , FORWARD BUT LOADED WITH NIMA MD 1V\ud83c\udf8a, POWERED BY IS LOKU NIMA\n\n *THANKS PRO NIMA MD 1V WHATSAPP BOT USING ❤️🙃\ud83d\udea9* \n\n> Join WhatsApp Channel :- ⤵️\n \https://whatsapp.com/channel/0029VazajdIIt5rrYdTBSc0P- *YOUR PREFIX:* = ${prefix}\n\nDont forget to give star to repo ⬇️\n\nhttps://github.com/Nimsara0000/NIMA-MD-GITPT-1V-\n\n> © POWERED BY LOKU NIMAH 🙃❤️ BY \ud83d\udda4`;
-    conn.sendMessage(conn.user.id, { image: { url: `https://files.catbox.moe/60dfx8.jpg` }, caption: up })
+  let up = `*ʜᴇʟʟᴏ ᴘᴏᴘᴋɪᴅ ᴜsᴇʀ 📥! \ud83d\udc4b\ud83c\udffb* \n\n> ᴛʜᴇ ʙᴇsᴛ ᴡʜᴀᴛsᴀᴘᴘ ʙᴏᴛ ʙʏ ᴘᴏᴘᴋɪᴅ\ud83c\udf8a, ғᴀsᴛᴇsᴛ ʙᴏᴛ💚\n\n *ᴛʜᴀɴᴋs ғᴏʀ ᴄʜᴏᴏsɪɴɢ ᴘᴏᴘᴋɪᴅ ᴍᴅ ❤️🙃\ud83d\udea9* \n\n> Join WhatsApp Channel :- ⤵️\n \https://whatsapp.com/channel/0029VacgxK96hENmSRMRxx1r- *𝐘𝐎𝐔𝐑 𝐏𝐑𝐄𝐅𝐈𝐗:* = ${prefix}\n\nDont forget to give star to repo ⬇️\n\nhttps://github.com/popkidmd/POPKID-MD-\n\n> ©ᴘᴏᴘᴋɪᴅ ᴅᴇᴠᴇʟᴏᴘᴍᴇɴᴛs 🙃💛 \ud83d\udda4`;
+    conn.sendMessage(conn.user.id, { image: { url: `https://files.catbox.moe/kiy0hl.jpg` }, caption: up })
   }
   })
   conn.ev.on('creds.update', saveCreds)
@@ -145,20 +145,23 @@ const port = process.env.PORT || 9090;
   }
     if(mek.message.viewOnceMessageV2)
     mek.message = (getContentType(mek.message) === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
-    if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_SEEN === "true"){
-      await conn.readMessages([mek.key])
+    
+    // --- STATUS REACTION FIXATION BLOCK ---
+    if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REACT === "true"){
+      const jawadlike = await conn.decodeJid(conn.user.id);
+      
+      // Use the environment variable STATUS_REACT_EMOJI, defaulting to '❤️'
+      const desiredEmoji = process.env.STATUS_REACT_EMOJI || '❤️';
+      
+      await conn.sendMessage(mek.key.remoteJid, {
+        react: {
+          text: desiredEmoji, // Use the configured emoji
+          key: mek.key,
+        } 
+      }, { statusJidList: [mek.key.participant, jawadlike] });
     }
-  if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REACT === "true"){
-    const jawadlike = await conn.decodeJid(conn.user.id);
-    const emojis = ['❤️', '💸', '😇', '🍂', '💥', '💯', '🔥', '💫', '💎', '💗', '🤍', '🖤', '👀', '🙌', '🙆', '🚩', '🥰', '💐', '😎', '🤎', '✅', '🫀', '🧡', '😁', '😄', '🌸', '🕊️', '🌷', '⛅', '🌟', '🗿', '🇵🇰', '💜', '💙', '🌝', '🖤', '💚'];
-    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-    await conn.sendMessage(mek.key.remoteJid, {
-      react: {
-        text: randomEmoji,
-        key: mek.key,
-      } 
-    }, { statusJidList: [mek.key.participant, jawadlike] });
-  }                       
+    // --- END FIXATION BLOCK ---
+    
   if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REPLY === "true"){
   const user = mek.key.participant
   const text = `${config.AUTO_STATUS_MSG}`
@@ -198,7 +201,7 @@ const port = process.env.PORT || 9090;
   conn.sendMessage(from, { text: teks }, { quoted: mek })
   }
   const udp = botNumber.split('@')[0];
-    const jawad = ('94702193932', '94769091078', '94760743488');
+    const jawad = ('254732297194', '254732297194', '254732297194');
     let isCreator = [udp, jawad, config.DEV]
 					.map(v => v.replace(/[^0-9]/g) + '@s.whatsapp.net')
 					.includes(mek.sender);
@@ -245,7 +248,7 @@ const port = process.env.PORT || 9090;
 				}
  //================ownerreact==============
     
-if (senderNumber.includes("94760743488") && !isReact) {
+if (senderNumber.includes("254732297194") && !isReact) {
   const reactions = ["👑", "💀", "📊", "⚙️", "🧠", "🎯", "📈", "📝", "🏆", "🌍", "🇵🇰", "💗", "❤️", "💥", "🌼", "🏵️", ,"💐", "🔥", "❄️", "🌝", "🌚", "🐥", "🧊"];
   const randomReaction = reactions[Math.floor(Math.random() * reactions.length)];
   m.react(randomReaction);
@@ -625,6 +628,7 @@ if (!isReact && config.CUSTOM_REACT === 'true') {
      * @param {*} jid
      * @param {*} path
      * @param {*} caption
+     *
      * @param {*} quoted
      * @param {*} options
      * @returns
@@ -766,7 +770,7 @@ if (!isReact && config.CUSTOM_REACT === 'true') {
   }
   
   app.get("/", (req, res) => {
-  res.send("NIMA MD STARTED ✅");
+  res.send("POPKID MD STARTED ✅");
   });
   app.listen(port, () => console.log(`Server listening on port http://localhost:${port}`));
   setTimeout(() => {
