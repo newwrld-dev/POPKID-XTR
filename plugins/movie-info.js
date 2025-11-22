@@ -6,7 +6,7 @@ const fetch = require('node-fetch');
 const movieSelections = {};
 
 cmd({
-  pattern: "movie",
+  pattern: "movieinfo",
   desc: "Search and download movies with selection",
   category: "media",
   react: "🎞️",
