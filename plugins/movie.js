@@ -1,0 +1,132 @@
+const config = require('../config');
+const { cmd } = require('../command');
+const fetch = require('node-fetch');
+
+// Temporary store for user selections
+const movieSelections = {};
+
+cmd({
+  pattern: "movie",
+  desc: "Search and download movies with selection",
+  category: "media",
+  react: "🎞️",
+  filename: __filename
+},
+async (conn, mek, m, { from, args, sender, reply }) => {
+  try {
+    const query = args.join(" ");
+    if (!query) {
+      return reply("❗ Please provide a movie name.\nExample: `.movie avatar`");
+    }
+
+    await conn.sendMessage(from, { text: `🔍 *Searching for:* _${query}_ ...` });
+
+    const res = await fetch(`https://movieapi.giftedtech.co.ke/api/search/${encodeURIComponent(query)}`);
+    const json = await res.json();
+
+    const items = json.results?.items || json.results || [];
+    if (items.length === 0) {
+      return reply(`❌ No movies found for *${query}*`);
+    }
+
+    const results = items.slice(0, 5);
+
+    let textMsg = `🟩 *POPKID MOVIE FINDER*\n\n🎬 *Results for:* _${query}_\n\nReply with a number *(1–5)* to choose a movie.\n\n`;
+    results.forEach((v, i) => {
+      textMsg += `*${i + 1}.* ${v.title || v.name || "Unknown"} (${v.year || "?"})\n`;
+    });
+
+    // Save results by chat id, not sender
+    movieSelections[from] = results;
+
+    await conn.sendMessage(from, {
+      text: textMsg,
+      contextInfo: {
+        forwardingScore: 999,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: "120363289379419860@newsletter",
+          newsletterName: "Popkid XTR",
+          serverMessageId: 202
+        }
+      }
+    }, { quoted: mek });
+
+  } catch (e) {
+    console.log(e);
+    reply(`❌ Error: ${e.message}`);
+  }
+});
+
+
+// ✅ LISTENER FOR USER NUMBER REPLY
+cmd({
+  pattern: ".*",  // catch all messages
+  on: "text",
+},
+async (conn, mek, m, { from, body, reply }) => {
+  try {
+    if (!movieSelections[from]) return;
+
+    const msg = body.trim();
+    const choice = parseInt(msg);
+    if (isNaN(choice) || choice < 1 || choice > 5) return;
+
+    const selectedMovie = movieSelections[from][choice - 1];
+    delete movieSelections[from];
+
+    const movieId = selectedMovie.subjectId;
+    if (!movieId) return reply("❌ Invalid selection. Try again.");
+
+    // Fetch info and sources
+    const info = await fetch(`https://movieapi.giftedtech.co.ke/api/info/${movieId}`);
+    const infoJson = await info.json();
+    const subject = infoJson.results?.subject || {};
+
+    const src = await fetch(`https://movieapi.giftedtech.co.ke/api/sources/${movieId}`);
+    const srcJson = await src.json();
+    const sources = srcJson.results || [];
+
+    if (!sources || sources.length === 0) {
+      return reply(`❌ No download found for *${subject.title || "this movie"}*`);
+    }
+
+    // Pick best quality
+    const best = sources.sort((a, b) => parseInt(b.quality) - parseInt(a.quality))[0];
+
+    await conn.sendMessage(from, {
+      image: { url: subject.cover },
+      caption:
+        `🎬 *${subject.title}*\n\n` +
+        `📆 *Released:* ${subject.releaseDate || "?"}\n` +
+        `⭐ *Rating:* ${subject.rating || "?"}\n` +
+        `⏳ *Duration:* ${subject.duration ? Math.floor(subject.duration / 60) + " min" : "?"}\n\n` +
+        `📝 *Description:*\n${subject.description || "No description"}\n\n` +
+        `📺 *Quality:* ${best.quality}\n\n` +
+        `⬇️ Downloading now...`
+    }, {
+      quoted: mek,
+      contextInfo: {
+        forwardingScore: 999,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: "120363289379419860@newsletter",
+          newsletterName: "Popkid XTR",
+          serverMessageId: 203
+        }
+      }
+    });
+
+    // Send download file
+    await conn.sendMessage(from, {
+      document: { url: best.download_url },
+      mimetype: "application/octet-stream",
+      fileName: `${subject.title || "movie"}-${best.quality}.mp4`,
+      caption: `🎞️ *${subject.title || "Movie"}* • ${best.quality}`
+    });
+
+  } catch (e) {
+    console.log(e);
+    reply(`❌ Error: ${e.message}`);
+  }
+});
