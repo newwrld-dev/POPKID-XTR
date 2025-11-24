@@ -168,8 +168,10 @@ const port = process.env.PORT || 9090;
   await conn.sendMessage(user, { text: text, react: { text: '💜', key: mek.key } }, { quoted: mek })
             }
             await Promise.all([
-              saveMessage(mek),
-            ]);
+  saveMessage(mek),
+]);
+
+});   // <-- ADD THIS
   const m = sms(conn, mek)
   const type = getContentType(mek.message)
   const content = JSON.stringify(mek.message)
