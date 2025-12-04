@@ -53,6 +53,20 @@ const emojiByCategory = {
   whatsapp: '📱',
 };
 
+const quotedContact = {
+key: {
+fromMe: false,
+participant: "0@s.whatsapp.net",
+remoteJid: "status@broadcast"
+},
+message: {
+contactMessage: {
+displayName: "POPKID MD VERIFIED ✅",
+vcard: "BEGIN:VCARD VERSION:3.0 FN:B.M.B VERIFIED ✅ ORG:POPKID MD BOT; TEL;type=CELL;type=VOICE;waid=254111385747:+254732297194 END:VCARD"
+}
+}
+};
+
 cmd({
   pattern: 'menu',
   alias: ['allmenu'],
@@ -76,35 +90,41 @@ cmd({
     };
 
     let menu = `
-*┏────〘 ᴘᴏᴘᴋɪᴅ xᴛʀ 〙───⊷*
-*┃ ᴜꜱᴇʀ : @${sender.split("@")[0]}*
-*┃ ʀᴜɴᴛɪᴍᴇ : ${uptime()}*
-*┃ ᴍᴏᴅᴇ : ${config.MODE}*
-*┃ ᴘʀᴇғɪx : 「 ${config.PREFIX}」* 
-*┃ ᴏᴡɴᴇʀ : ${config.OWNER_NAME}*
-*┃ ᴘʟᴜɢɪɴꜱ : 『 ${commands.length} 』*
-*┃ ᴅᴇᴠ : ᴘᴏᴘᴋɪᴅ*
-*┃ ᴠᴇʀꜱɪᴏɴ : 2.0.0*
-*┗──────────────⊷*`;
+╭╴╴╴╴╴╴╴╴╴╴╴╴╴╴╮
+│ ᴘᴏᴘᴋɪᴅ ✦ xᴛʀ
+│ 👤 @${sender.split("@")[0]}
+│ ⏱️ ʀᴜɴᴛɪᴍᴇ : ${uptime()}
+│ ⚙️ ᴍᴏᴅᴇ : ${config.MODE}
+│ 🔰 ᴘʀᴇғɪx : 「 ${config.PREFIX}」
+│ 👑 ᴏᴡɴᴇʀ : ${config.OWNER_NAME}
+│ 🔌 ᴘʟᴜɢɪɴꜱ : 『 ${commands.length} 』
+│ ᴅᴇᴠ : ᴘᴏᴘᴋɪᴅ
+│ 🛠️ ᴠᴇʀꜱɪᴏɴ : 2.0.0
+╰╴╴╴╴╴╴╴╴╴╴╴╴╴╴╯
+`;
 
-    // Group commands by category (improved logic)
-    const categories = {};
-    for (const cmd of commands) {
-      if (cmd.category && !cmd.dontAdd && cmd.pattern) {
-        const normalizedCategory = normalize(cmd.category);
-        categories[normalizedCategory] = categories[normalizedCategory] || [];
-        categories[normalizedCategory].push(cmd.pattern.split('|')[0]);
-      }
-    }
+// Group commands by category
+const categories = {};
+for (const cmd of commands) {
+  if (cmd.category && !cmd.dontAdd && cmd.pattern) {
+    const normalizedCategory = normalize(cmd.category);
+    categories[normalizedCategory] = categories[normalizedCategory] || [];
+    categories[normalizedCategory].push(cmd.pattern.split('|')[0]);
+  }
+}
 
-    // Add sorted categories with stylized text
-    for (const cat of Object.keys(categories).sort()) {
-      const emoji = emojiByCategory[cat] || '🧛‍♂️';
-      menu += `\n\n*┏─『 ${emoji} ${toUpperStylized(cat)} ${toUpperStylized('Menu')} 』──⊷*\n`;
-      for (const cmd of categories[cat].sort()) {
-        menu += `*│ ${prefix}${cmd}*\n`;
-      }
-      menu += `*┗──────────────⊷*`;
+// Add categories in compact style
+for (const cat of Object.keys(categories).sort()) {
+  const emoji = emojiByCategory[cat] || '❤️';
+  const title = `${emoji} ${toUpperStylized(cat)}`;
+  menu += `\n╭╴╴╴╴╴╴╴╴╴╴╴╴╴╴╮\n│ ${title}\n╰╴╴╴╴╴╴╴╴╴╴╴╴╴╴╯`;
+  for (const c of categories[cat].sort()) {
+    menu += `\n┃❍┃• ${prefix}${c}`;
+  }
+  menu += `\n┃❍└───────────┈⊷`;
+}
+
+menu += `\n╰─────────────────┈⊷`;
     }
 
     menu += `\n\n> ${config.DESCRIPTION || toUpperStylized('Explore the bot commands!')}`;
