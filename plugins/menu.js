@@ -4,8 +4,30 @@ const { cmd, commands } = require('../command');
 const { runtime } = require('../lib/functions');
 const os = require('os');
 const { getPrefix } = require('../lib/prefix');
+const fs = require('fs');
+const path = require('path');
 
-// Fonction pour styliser les majuscules comme ʜɪ
+// Quoted Contact Message (from BMB style)
+const quotedContact = {
+  key: {
+    fromMe: false,
+    participant: `0@s.whatsapp.net`,
+    remoteJid: "status@broadcast"
+  },
+  message: {
+    contactMessage: {
+      displayName: "ᴘᴏᴘᴋɪᴅ VERIFIED ✅",
+      vcard: `BEGIN:VCARD
+VERSION:3.0
+FN:ᴘᴏᴘᴋɪᴅ VERIFIED ✅
+ORG:POP KID BOT;
+TEL;type=CELL;type=VOICE;waid=${config.OWNER_NUMBER || '0000000000'}:+${config.OWNER_NUMBER || '0000000000'}
+END:VCARD`
+    }
+  }
+};
+
+// Stylize uppercase letters
 function toUpperStylized(str) {
   const stylized = {
     A: 'ᴀ', B: 'ʙ', C: 'ᴄ', D: 'ᴅ', E: 'ᴇ', F: 'ғ', G: 'ɢ', H: 'ʜ',
@@ -16,10 +38,10 @@ function toUpperStylized(str) {
   return str.split('').map(c => stylized[c.toUpperCase()] || c).join('');
 }
 
-// Normalisation des catégories
+// Normalize category names
 const normalize = (str) => str.toLowerCase().replace(/\s+menu$/, '').trim();
 
-// Emojis par catégorie normalisée
+// Emoji by category
 const emojiByCategory = {
   ai: '🤖',
   anime: '🍥',
@@ -53,26 +75,12 @@ const emojiByCategory = {
   whatsapp: '📱',
 };
 
-const quotedContact = {
-key: {
-fromMe: false,
-participant: "0@s.whatsapp.net",
-remoteJid: "status@broadcast"
-},
-message: {
-contactMessage: {
-displayName: "POPKID MD VERIFIED ✅",
-vcard: "BEGIN:VCARD VERSION:3.0 FN:B.M.B VERIFIED ✅ ORG:POPKID MD BOT; TEL;type=CELL;type=VOICE;waid=254111385747:+254732297194 END:VCARD"
-}
-}
-};
-
 cmd({
   pattern: 'menu',
   alias: ['allmenu'],
   desc: 'Show all bot commands',
   category: 'menu',
-  react: '👌',
+  react: '🪀',
   filename: __filename
 }, async (conn, mek, m, { from, sender, reply }) => {
   try {
@@ -89,72 +97,69 @@ cmd({
       return `${h}h ${m}m ${s}s`;
     };
 
+    // Random menu image (BMB style)
+    const randomIndex = Math.floor(Math.random() * 10) + 1;
+    const imagePath = path.join(__dirname, '..', 'plugins', `menu${randomIndex}.jpg`);
+    let imageBuffer;
+    try { imageBuffer = fs.readFileSync(imagePath); } catch { imageBuffer = null; }
+
+    // Menu header (BMB style)
     let menu = `
-╭╴╴╴╴╴╴╴╴╴╴╴╴╴╴╮
-│ ᴘᴏᴘᴋɪᴅ ✦ xᴛʀ
-│ 👤 @${sender.split("@")[0]}
-│ ⏱️ ʀᴜɴᴛɪᴍᴇ : ${uptime()}
-│ ⚙️ ᴍᴏᴅᴇ : ${config.MODE}
-│ 🔰 ᴘʀᴇғɪx : 「 ${config.PREFIX}」
-│ 👑 ᴏᴡɴᴇʀ : ${config.OWNER_NAME}
-│ 🔌 ᴘʟᴜɢɪɴꜱ : 『 ${commands.length} 』
-│ ᴅᴇᴠ : ᴘᴏᴘᴋɪᴅ
-│ 🛠️ ᴠᴇʀꜱɪᴏɴ : 2.0.0
-╰╴╴╴╴╴╴╴╴╴╴╴╴╴╴╯
-`;
+╭━━━《 ⚙️ ᴘᴏᴘᴋɪᴅ BOT ⚙️ 》━━━┈⊷
+┃▸ User     : @${sender.split("@")[0]}
+┃▸ Runtime  : ${uptime()}
+┃▸ Mode     : ${config.MODE}
+┃▸ Prefix   : ${config.PREFIX}
+┃▸ Owner    : ${config.OWNER_NAME}
+┃▸ Plugins  : ${commands.length}
+┃▸ Dev      : ᴘᴏᴘᴋɪᴅ
+┃▸ Version  : 2.0.0
+╰━━━━━━━━━━━━━━━━━━┈⊷`;
 
-// Group commands by category
-const categories = {};
-for (const cmd of commands) {
-  if (cmd.category && !cmd.dontAdd && cmd.pattern) {
-    const normalizedCategory = normalize(cmd.category);
-    categories[normalizedCategory] = categories[normalizedCategory] || [];
-    categories[normalizedCategory].push(cmd.pattern.split('|')[0]);
-  }
-}
+    // Group commands by category (Popkid dynamic style)
+    const categories = {};
+    for (const cmd of commands) {
+      if (cmd.category && !cmd.dontAdd && cmd.pattern) {
+        const cat = normalize(cmd.category);
+        categories[cat] = categories[cat] || [];
+        categories[cat].push(cmd.pattern.split('|')[0]);
+      }
+    }
 
-// Add categories in compact style
-for (const cat of Object.keys(categories).sort()) {
-  const emoji = emojiByCategory[cat] || '❤️';
-  const title = `${emoji} ${toUpperStylized(cat)}`;
-  menu += `\n╭╴╴╴╴╴╴╴╴╴╴╴╴╴╴╮\n│ ${title}\n╰╴╴╴╴╴╴╴╴╴╴╴╴╴╴╯`;
-  for (const c of categories[cat].sort()) {
-    menu += `\n┃❍┃• ${prefix}${c}`;
-  }
-  menu += `\n┃❍└───────────┈⊷`;
-}
-
-menu += `\n╰─────────────────┈⊷`;
+    for (const cat of Object.keys(categories).sort()) {
+      const emoji = emojiByCategory[cat] || '🧛‍♂️';
+      menu += `\n\n┏─『 ${emoji} ${toUpperStylized(cat)} ${toUpperStylized('Menu')} 』──⊷\n`;
+      for (const c of categories[cat].sort()) {
+        menu += `│ ${prefix}${c}\n`;
+      }
+      menu += `┗──────────────⊷`;
     }
 
     menu += `\n\n> ${config.DESCRIPTION || toUpperStylized('Explore the bot commands!')}`;
 
-    // Context info for image message
-    const imageContextInfo = {
-      mentionedJid: [sender],
-      forwardingScore: 999,
-      isForwarded: true,
-      forwardedNewsletterMessageInfo: {
-        newsletterJid: config.NEWSLETTER_JID || '120363289379419860@newsletter',
-        newsletterName: config.OWNER_NAME || toUpperStylized('popkid'),
-        serverMessageId: 143
-      }
-    };
-
-    // Send menu image
+    // Send menu
     await conn.sendMessage(
       from,
       {
-        image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
+        image: imageBuffer ? { buffer: imageBuffer } : { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
         caption: menu,
-        contextInfo: imageContextInfo
+        contextInfo: {
+          mentionedJid: [sender],
+          forwardingScore: 999,
+          isForwarded: true,
+          forwardedNewsletterMessageInfo: {
+            newsletterJid: config.NEWSLETTER_JID || '120363289379419860@newsletter',
+            newsletterName: config.OWNER_NAME || toUpperStylized('popkid'),
+            serverMessageId: 143
+          }
+        }
       },
-      { quoted: mek }
+      { quoted: quotedContact }
     );
 
     // Send audio if configured
     if (config.MENU_AUDIO_URL) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(r => setTimeout(r, 1000));
       await conn.sendMessage(
         from,
         {
@@ -171,13 +176,12 @@ menu += `\n╰─────────────────┈⊷`;
             }
           }
         },
-        { quoted: mek }
+        { quoted: quotedContact }
       );
     }
 
   } catch (e) {
     console.error('Menu Error:', e.message);
-    await reply(`❌ ${toUpperStylized('Error')}: Failed to show menu. Try again.\n${toUpperStylized('Details')}: ${e.message}`);
+    await reply(`❌ ${toUpperStylized('Error')}: Failed to show menu.\n${toUpperStylized('Details')}: ${e.message}`);
   }
 });
-
