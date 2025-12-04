@@ -9,14 +9,14 @@ module.exports = {
     // --- BOT CORE SETTINGS ---
     SESSION_ID: process.env.SESSION_ID || "popkid-session",
     PREFIX: process.env.PREFIX || ".",
-    BOT_NAME: process.env.BOT_NAME || "POPKID-MD",
-    DESCRIPTION: process.env.DESCRIPTION || "© popkid xtr bot",
+    BOT_NAME: process.env.BOT_NAME || "𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃",
+    DESCRIPTION: process.env.DESCRIPTION || "𝐏𝐎𝐏𝐊𝐈𝐃 𝐌𝐃 𝐁𝐎𝐓",
     MODE: process.env.MODE || "public", // Options: public, private, inbox, group
     PUBLIC_MODE: process.env.PUBLIC_MODE || "true",
     
     // --- OWNER/DEV SETTINGS ---
     OWNER_NUMBER: process.env.OWNER_NUMBER || "254732297194",
-    OWNER_NAME: process.env.OWNER_NAME || "POPKID",
+    OWNER_NAME: process.env.OWNER_NAME || "𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃",
     DEV: process.env.DEV || "254732297194", // Developer number
 
     // --- MESSAGING & VISIBILITY ---
@@ -34,7 +34,7 @@ module.exports = {
     STICKER_NAME: process.env.STICKER_NAME || "POPKID-MD", // Sticker pack name
     MENU_IMAGE_URL: process.env.MENU_IMAGE_URL || "https://files.catbox.moe/kiy0hl.jpg", // Menu image
     ALIVE_IMG: process.env.ALIVE_IMG || "https://files.catbox.moe/n8o8py.jpg", // Alive image
-    LIVE_MSG: process.env.LIVE_MSG || ">POPKID MD IS ALIVE😍", // Alive message
+    LIVE_MSG: process.env.LIVE_MSG || "> 𝐏𝐎𝐏𝐊𝐈𝐃 𝐌𝐃 𝐁𝐎𝐓😍", // Alive message
 
     // --- REACTION SETTINGS ---
     AUTO_REACT: process.env.AUTO_REACT || "false", // Auto react on all messages
