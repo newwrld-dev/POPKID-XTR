@@ -4,12 +4,12 @@
   "description": "A WhatsApp Bot Created By POPKID",
   "main": "index.js",
   "scripts": {
-    "start": "pm2 start index.js --deep-monitoring --attach --name POPKID-XTR",
-    "stop": "pm2 stop POPKID-XTR",
-    "restart": "pm2 restart POPKID-XTR"
+    "start": "pm2 start index.js --deep-monitoring --attach --name POPKID-MD",
+    "stop": "pm2 stop POPKID-MD",
+    "restart": "pm2 restart POPKID-MD"
   },
   "dependencies": {
-    "gifted-baileys": "2.0.0",
+    "@whiskeysockets/baileys": "npm:gifted-baileys@2.0.0",
     "@adiwajshing/keyed-db": "^0.2.4",
     "@dark-yasiya/yt-dl.js": "1.0.5",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
