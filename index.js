@@ -158,7 +158,7 @@ Let your chats stay smart, clean & advanced 🚀
 
 ━━━━━━━━━━━━━━━━━━
 
-🔹 *Current Bot Prefix:*  **`.`**  
+🔹 *Current Bot Prefix:*  *.* 
 ✨ You can modify it anytime using:  *.prefix*
 
 ━━━━━━━━━━━━━━━━━━
