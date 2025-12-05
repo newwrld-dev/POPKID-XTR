@@ -22,7 +22,7 @@ END:VCARD`
 };
 
 cmd({
-  pattern: "play7",
+  pattern: "play2",
   alias: ["ytmp3"],
   desc: "Download YouTube song (MP3)",
   category: "main",
