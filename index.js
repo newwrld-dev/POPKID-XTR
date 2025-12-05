@@ -190,10 +190,11 @@ Share • Star • Fork the repo
   } catch (err) {
     console.error("[ ❌ ] Connection failed:", err)
   }
-// Function to get the current date and time in Tanzania
+// Function to get the current date and time in 𝚔𝚎𝚗𝚢𝚊
+    // Function to get the current date and time in Tanzania
 function getCurrentDateTimeParts() {
     const options = {
-        timeZone: 'Africa/Dar_es_salam',
+        timeZone: 'Africa/Nairobi',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -225,7 +226,7 @@ function getCurrentDateTimeParts() {
 setInterval(async () => {
     if (config.AUTO_BIO === "true") {
         const { date, time } = getCurrentDateTimeParts(); // Get separated date and time
-        const bioText = `❤️ ᴘᴏᴘᴋɪᴅ xᴍᴅ ʙᴏᴛ 🤖 ɪs ʟɪᴠᴇ ɴᴏᴡ\n📅 ${date}\n⏰ ${time}`;
+        const bioText = `😇 𝙿𝙾𝙿𝙺𝙸𝙳 𝚇𝙼𝙳 𝙱𝙾𝚃 🤖 𝙻𝙸𝚅𝙴 𝙽𝙾𝚆\n📅 ${date}\n⏰ ${time}`;
         try {
             await conn.setStatus(bioText);
             console.log(`Updated Bio: ${bioText}`);
@@ -233,7 +234,7 @@ setInterval(async () => {
             console.error("Failed to update Bio:", err);
         }
     }
-}, 60000); // Update every 1 minute
+}, 60000); // Update kila dakika 1
 //==============================
 
 conn?.ev?.on('messages.update', async updates => {
