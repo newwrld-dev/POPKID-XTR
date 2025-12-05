@@ -1,38 +1,27 @@
 const config = require('../config');
-const { cmd } = require('../command');
-const os = require('os');
+const { cmd, commands } = require('../command');
 
 // Popkids Verified Contact
-const quotedContact = {
-  key: {
-    fromMe: false,
-    participant: `0@s.whatsapp.net`,
-    remoteJid: "status@broadcast"
-  },
-  message: {
-    contactMessage: {
-      displayName: "POP KIDS VERIFIED ✅",
-      vcard: `BEGIN:VCARD
+const verifiedContact = {
+    key: {
+        fromMe: false,
+        participant: `0@s.whatsapp.net`,
+        remoteJid: "status@broadcast"
+    },
+    message: {
+        contactMessage: {
+            displayName: "POPKID MD BOT ✅",
+            vcard: `BEGIN:VCARD
 VERSION:3.0
 FN:POP KIDS VERIFIED ✅
 ORG:POP KIDS BOT;
 TEL;type=CELL;type=VOICE;waid=${config.OWNER_NUMBER || '0000000000'}:+${config.OWNER_NUMBER || '0000000000'}
 END:VCARD`
+        }
     }
-  }
 };
 
-// List of playful messages
-const funMessages = [
-  "💨 Zooming through!",
-  "🚀 Rocket speed!",
-  "⚡ Lightning fast!",
-  "🎯 Bullseye!",
-  "🔥 On fire!",
-  "💎 Crystal clear ping!"
-];
-
-// Ping command
+// ping command
 cmd({
     pattern: "ping",
     alias: ["speed","pong"],
@@ -52,32 +41,20 @@ async (conn, mek, m, { from, sender, reply }) => {
         let reactionEmoji = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
         let textEmoji = textEmojis[Math.floor(Math.random() * textEmojis.length)];
 
+        // Ensure reaction and text emojis are different
         while (textEmoji === reactionEmoji) {
             textEmoji = textEmojis[Math.floor(Math.random() * textEmojis.length)];
         }
 
-        // Send reaction emoji
+        // Send reaction
         await conn.sendMessage(from, { react: { text: textEmoji, key: mek.key } });
 
         const end = Date.now();
-        const responseTime = end - start;
+        const responseTime = (end - start) / 1000;
 
-        // Bot uptime
-        const uptime = process.uptime();
-        const hours = Math.floor(uptime / 3600);
-        const minutes = Math.floor((uptime % 3600) / 60);
-        const seconds = Math.floor(uptime % 60);
+        const text = `> *𝐏𝐎𝐍𝐆: ${responseTime.toFixed(2)}ms ${reactionEmoji}*`;
 
-        const funMessage = funMessages[Math.floor(Math.random() * funMessages.length)];
-
-        const text = `
-┏━⊱ ⚡ *PING 😇* ⚡ ⊰━┓
-┃  Response Time : ${responseTime}ms ${reactionEmoji}
-┃  𝐔𝐏𝐓𝐈𝐌𝐄        : ${hours}h ${minutes}m ${seconds}s
-┃  𝐒𝐓𝐀𝐓𝐔𝐒        : ${funMessage}
-┗━━━━━━━━━━━━━━━━━┛
-`;
-
+        // Send ping message with verified contact quoted
         await conn.sendMessage(from, {
             text,
             contextInfo: {
@@ -90,18 +67,18 @@ async (conn, mek, m, { from, sender, reply }) => {
                     serverMessageId: 143
                 }
             }
-        }, { quoted: quotedContact });
+        }, { quoted: verifiedContact });
 
     } catch (e) {
         console.error("Error in ping command:", e);
-        reply(`❌ An error occurred: ${e.message}`, quotedContact);
+        reply(`❌ An error occurred: ${e.message}`, verifiedContact);
     }
 });
 
-// Ping2 command (advanced version)
+// ping2 command
 cmd({
     pattern: "ping2",
-    desc: "Check bot's response time in an advanced style.",
+    desc: "Check bot's response time.",
     category: "main",
     react: "🍂",
     filename: __filename
@@ -109,23 +86,13 @@ cmd({
 async (conn, mek, m, { from, reply }) => {
     try {
         const startTime = Date.now();
-        const message = await conn.sendMessage(from, { text: '⏳ *PINGING...*' }, { quoted: quotedContact });
+        const message = await conn.sendMessage(from, { text: '*𝐏𝐢𝐧𝐠𝐢𝐧𝐠😇*' }, { quoted: verifiedContact });
         const endTime = Date.now();
         const ping = endTime - startTime;
 
-        const memoryUsage = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
-
-        const text = `
-┏━⊱ 🍂 *𝙿𝙾𝙿𝙺𝙸𝙳 𝙼𝙳* 🍂 ⊰━┓
-┃  Response Time : ${ping}ms
-┃  𝐌𝐄𝐌𝐎𝐑𝐘😇  : ${memoryUsage} MB
-┃  𝐇𝐎𝐒𝐓         : ${os.hostname()}
-┗━━━━━━━━━━━━━━━━━━━━┛
-`;
-
-        await conn.sendMessage(from, { text }, { quoted: quotedContact });
+        await conn.sendMessage(from, { text: `*𝐒𝐏𝐄𝐄𝐃 : ${ping}ms*` }, { quoted: verifiedContact });
     } catch (e) {
         console.log(e);
-        reply(`❌ ${e}`, quotedContact);
+        reply(`❌ ${e}`, verifiedContact);
     }
 });
