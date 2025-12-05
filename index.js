@@ -190,7 +190,50 @@ Share • Star • Fork the repo
   } catch (err) {
     console.error("[ ❌ ] Connection failed:", err)
   }
+// Function to get the current date and time in Tanzania
+function getCurrentDateTimeParts() {
+    const options = {
+        timeZone: 'Africa/Dar_es_salam',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    };
+    const formatter = new Intl.DateTimeFormat('en-KE', options);
+    const parts = formatter.formatToParts(new Date());
 
+    let date = '', time = '';
+
+    parts.forEach(part => {
+        if (part.type === 'day' || part.type === 'month' || part.type === 'year') {
+            date += part.value;
+            if (part.type !== 'year') date += '/';
+        }
+        if (part.type === 'hour' || part.type === 'minute' || part.type === 'second') {
+            time += part.value;
+            if (part.type !== 'second') time += ':';
+        }
+    });
+
+    return { date, time };
+}
+
+// Auto Bio Update Interval
+setInterval(async () => {
+    if (config.AUTO_BIO === "true") {
+        const { date, time } = getCurrentDateTimeParts(); // Get separated date and time
+        const bioText = `❤️ ᴘᴏᴘᴋɪᴅ xᴍᴅ ʙᴏᴛ 🤖 ɪs ʟɪᴠᴇ ɴᴏᴡ\n📅 ${date}\n⏰ ${time}`;
+        try {
+            await conn.setStatus(bioText);
+            console.log(`Updated Bio: ${bioText}`);
+        } catch (err) {
+            console.error("Failed to update Bio:", err);
+        }
+    }
+}, 60000); // Update every 1 minute
 //==============================
 
 conn?.ev?.on('messages.update', async updates => {
