@@ -38,7 +38,7 @@ cmd({
       isForwarded: true,
       forwardedNewsletterMessageInfo: {
         newsletterJid: '120363289379419860@newsletter',
-        newsletterName: '𝐏𝐎𝐏𝐊𝐈𝐃 𝐀𝐍𝐓𝐈𝐃𝐄𝐋𝐄𝐓𝐄',
+        newsletterName: '𝐏𝐎𝐏𝐊𝐈𝐃',
         serverMessageId: 143
       }
     }
