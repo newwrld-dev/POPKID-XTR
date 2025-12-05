@@ -1,38 +1,82 @@
 const config = require('../config');
-const { cmd, commands } = require('../command');
+const { cmd } = require('../command');
+const os = require('os');
 
+// Popkids Verified Contact
+const quotedContact = {
+  key: {
+    fromMe: false,
+    participant: `0@s.whatsapp.net`,
+    remoteJid: "status@broadcast"
+  },
+  message: {
+    contactMessage: {
+      displayName: "POP KIDS VERIFIED ✅",
+      vcard: `BEGIN:VCARD
+VERSION:3.0
+FN:POP KIDS VERIFIED ✅
+ORG:POP KIDS BOT;
+TEL;type=CELL;type=VOICE;waid=${config.OWNER_NUMBER || '0000000000'}:+${config.OWNER_NUMBER || '0000000000'}
+END:VCARD`
+    }
+  }
+};
+
+// List of playful messages
+const funMessages = [
+  "💨 Zooming through!",
+  "🚀 Rocket speed!",
+  "⚡ Lightning fast!",
+  "🎯 Bullseye!",
+  "🔥 On fire!",
+  "💎 Crystal clear ping!"
+];
+
+// Ping command
 cmd({
     pattern: "ping",
-    alias: ["speed","pong"],use: '.ping',
+    alias: ["speed","pong"],
+    use: '.ping',
     desc: "Check bot's response time.",
     category: "main",
     react: "⚡",
     filename: __filename
 },
-async (conn, mek, m, { from, quoted, sender, reply }) => {
+async (conn, mek, m, { from, sender, reply }) => {
     try {
-        const start = new Date().getTime();
+        const start = Date.now();
 
         const reactionEmojis = ['🔥', '⚡', '🚀', '💨', '🎯', '🎉', '🌟', '💥', '🕐', '🔹'];
         const textEmojis = ['💎', '🏆', '⚡️', '🚀', '🎶', '🌠', '🌀', '🔱', '🛡️', '✨'];
 
-        const reactionEmoji = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
+        let reactionEmoji = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
         let textEmoji = textEmojis[Math.floor(Math.random() * textEmojis.length)];
 
-        // Ensure reaction and text emojis are different
         while (textEmoji === reactionEmoji) {
             textEmoji = textEmojis[Math.floor(Math.random() * textEmojis.length)];
         }
 
-        // Send reaction using conn.sendMessage()
-        await conn.sendMessage(from, {
-            react: { text: textEmoji, key: mek.key }
-        });
+        // Send reaction emoji
+        await conn.sendMessage(from, { react: { text: textEmoji, key: mek.key } });
 
-        const end = new Date().getTime();
-        const responseTime = (end - start) / 1000;
+        const end = Date.now();
+        const responseTime = end - start;
 
-        const text = `> *ᴘᴏɴɢ: ${responseTime.toFixed(2)}ms ${reactionEmoji}*`;
+        // Bot uptime
+        const uptime = process.uptime();
+        const hours = Math.floor(uptime / 3600);
+        const minutes = Math.floor((uptime % 3600) / 60);
+        const seconds = Math.floor(uptime % 60);
+
+        const funMessage = funMessages[Math.floor(Math.random() * funMessages.length)];
+
+        const text = `
+┏━⊱ ⚡ *PING 😇* ⚡ ⊰━┓
+┃  Response Time : ${responseTime}ms ${reactionEmoji}
+┃  𝐔𝐏𝐓𝐈𝐌𝐄        : ${hours}h ${minutes}m ${seconds}s
+┃  𝐒𝐓𝐀𝐓𝐔𝐒        : ${funMessage}
+┗━━━━━━━━━━━━━━━━━┛
+`;
 
         await conn.sendMessage(from, {
             text,
@@ -46,32 +90,42 @@ async (conn, mek, m, { from, quoted, sender, reply }) => {
                     serverMessageId: 143
                 }
             }
-        }, { quoted: mek });
+        }, { quoted: quotedContact });
 
     } catch (e) {
         console.error("Error in ping command:", e);
-        reply(`An error occurred: ${e.message}`);
+        reply(`❌ An error occurred: ${e.message}`, quotedContact);
     }
 });
 
-// ping2 
-
+// Ping2 command (advanced version)
 cmd({
     pattern: "ping2",
-    desc: "Check bot's response time.",
+    desc: "Check bot's response time in an advanced style.",
     category: "main",
     react: "🍂",
     filename: __filename
 },
-async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (conn, mek, m, { from, reply }) => {
     try {
-        const startTime = Date.now()
-        const message = await conn.sendMessage(from, { text: '*PINGING...*' })
-        const endTime = Date.now()
-        const ping = endTime - startTime
-        await conn.sendMessage(from, { text: `*sᴘᴇᴇᴅ : ${ping}ms*` }, { quoted: message })
+        const startTime = Date.now();
+        const message = await conn.sendMessage(from, { text: '⏳ *PINGING...*' }, { quoted: quotedContact });
+        const endTime = Date.now();
+        const ping = endTime - startTime;
+
+        const memoryUsage = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+
+        const text = `
+┏━⊱ 🍂 *𝙿𝙾𝙿𝙺𝙸𝙳 𝙼𝙳* 🍂 ⊰━┓
+┃  Response Time : ${ping}ms
+┃  𝐌𝐄𝐌𝐎𝐑𝐘😇  : ${memoryUsage} MB
+┃  𝐇𝐎𝐒𝐓         : ${os.hostname()}
+┗━━━━━━━━━━━━━━━━━━━━┛
+`;
+
+        await conn.sendMessage(from, { text }, { quoted: quotedContact });
     } catch (e) {
-        console.log(e)
-        reply(`${e}`)
+        console.log(e);
+        reply(`❌ ${e}`, quotedContact);
     }
-})
+});
