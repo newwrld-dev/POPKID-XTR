@@ -5,6 +5,7 @@ const fetch = require('node-fetch');
 
 const USER_GROUP_DATA = path.join(__dirname, '../data/userGroupData.json');
 
+// In-memory memory storage
 const chatMemory = {
     messages: new Map(),
     userInfo: new Map()
@@ -24,7 +25,7 @@ function saveUserGroupData(data) {
     fs.writeFileSync(USER_GROUP_DATA, JSON.stringify(data, null, 2));
 }
 
-// Typing delay
+// Random typing delay
 function randomDelay() {
     return Math.floor(Math.random() * 2000) + 1500;
 }
@@ -55,7 +56,7 @@ function extractUserInfo(text) {
     return info;
 }
 
-// Call Gifted AI
+// Gifted AI Call
 async function giftedAI(prompt) {
     try {
         const url = `https://api.giftedtech.co.ke/api/ai/gpt?apikey=gifted&q=${encodeURIComponent(prompt)}`;
@@ -86,9 +87,10 @@ async (conn, mek, m, { from, reply, args }) => {
     const match = args[0];
     const data = loadUserGroupData();
 
-    const botId = conn.user.id.split(":")[0] + "@s.whatsapp.net";
     const sender = mek.key.participant || mek.participant || mek.key.remoteJid;
 
+    // CORRECT OWNER ID (FIXED)
+    const botId = conn.user.id;
     const isOwner = sender === botId;
 
     // Check admin if group
@@ -105,7 +107,9 @@ async (conn, mek, m, { from, reply, args }) => {
         return reply("*Usage:*\n.chatbot on\n.chatbot off");
     }
 
-    if (!isOwner && !isAdmin) return reply("❌ Only admins or owner can use chatbot settings.");
+    // Correct permission check
+    if (!isOwner && !isAdmin)
+        return reply("❌ Only admins or owner can use chatbot settings.");
 
     if (match === "on") {
         data.chatbot[chatId] = true;
@@ -132,7 +136,8 @@ async function chatbotAutoReply(conn, mek) {
         const chatId = mek.key.remoteJid;
         const data = loadUserGroupData();
 
-        if (!data.chatbot[chatId]) return; // Chatbot disabled
+        // Chatbot disabled?
+        if (!data.chatbot[chatId]) return;
 
         const sender = mek.key.participant || mek.participant || mek.key.remoteJid;
 
@@ -143,22 +148,22 @@ async function chatbotAutoReply(conn, mek) {
 
         if (!text) return;
 
-        const botId = conn.user.id.split(":")[0] + "@s.whatsapp.net";
+        // Bot tag
+        const botId = conn.user.id;
         const botTag = `@${botId.split("@")[0]}`;
-
         const isMention = text.includes(botTag);
 
         if (!isMention) return;
 
         text = text.replace(botTag, "").trim();
 
-        // Initialize user memory
+        // User memory init
         if (!chatMemory.messages.has(sender)) {
             chatMemory.messages.set(sender, []);
             chatMemory.userInfo.set(sender, {});
         }
 
-        // Extract info
+        // Extract user info
         const info = extractUserInfo(text);
         if (Object.keys(info).length > 0) {
             chatMemory.userInfo.set(sender, { 
@@ -174,7 +179,7 @@ async function chatbotAutoReply(conn, mek) {
 
         await showTyping(conn, chatId);
 
-        // Build prompt
+        // Prompt for AI
         const prompt = `
 User Info: ${JSON.stringify(chatMemory.userInfo.get(sender))}
 Chat History: ${logs.join("\n")}
