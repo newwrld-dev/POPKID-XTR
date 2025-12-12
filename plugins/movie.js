@@ -1,132 +1,153 @@
-const config = require('../config');
-const { cmd } = require('../command');
-const fetch = require('node-fetch');
+const axios = require("axios");
+const { cmd } = require("../command");
+const config = require("../config");
 
-// Temporary store for user selections
-const movieSelections = {};
+// Quoted Contact (Same style as play.js)
+const quotedContact = {
+  key: {
+    fromMe: false,
+    participant: `0@s.whatsapp.net`,
+    remoteJid: "status@broadcast"
+  },
+  message: {
+    contactMessage: {
+      displayName: "POP KIDS VERIFIED ✅",
+      vcard: `BEGIN:VCARD
+VERSION:3.0
+FN:POP KIDS VERIFIED ✅
+ORG:POP KIDS BOT;
+TEL;type=CELL;type=VOICE;waid=${config.OWNER_NUMBER || '0000000000'}:+${config.OWNER_NUMBER || '0000000000'}
+END:VCARD`
+    }
+  }
+};
+
+// Avoid double-download
+const processed = new Set();
 
 cmd({
   pattern: "movie",
-  desc: "Search and download movies with selection",
-  category: "media",
-  react: "🎞️",
+  alias: ["film", "downloadmovie", "mk"],
+  react: "🎬",
+  desc: "Download movies using GiftedTech Movie API",
+  category: "movies",
+  use: ".movie <movie name>",
   filename: __filename
-},
-async (conn, mek, m, { from, args, sender, reply }) => {
+}, 
+
+async (conn, mek, m, { from, q, sender }) => {
+
+  const newsletterConfig = {
+    contextInfo: {
+      mentionedJid: [sender],
+      forwardingScore: 999,
+      isForwarded: true,
+      forwardedNewsletterMessageInfo: {
+        newsletterJid: '120363289379419860@newsletter',
+        newsletterName: '𝐏𝐎𝐏𝐊𝐈𝐃',
+        serverMessageId: 222
+      }
+    }
+  };
+
   try {
-    const query = args.join(" ");
+
+    if (processed.has(mek.key.id)) return;
+    processed.add(mek.key.id);
+    setTimeout(() => processed.delete(mek.key.id), 5 * 60 * 1000);
+
+    const query = q?.trim();
     if (!query) {
-      return reply("❗ Please provide a movie name.\nExample: `.movie avatar`");
+      return conn.sendMessage(from, { 
+        text: "🎬 *Provide a movie name to search*\n\nExample:\n.movie Avatar", 
+        ...newsletterConfig 
+      }, { quoted: quotedContact });
     }
 
-    await conn.sendMessage(from, { text: `🔍 *Searching for:* _${query}_ ...` });
+    await conn.sendMessage(from, { react: { text: "🔍", key: mek.key } });
+    await conn.sendMessage(from, { 
+      text: `🎬 Searching for: *${query}*...`, 
+      ...newsletterConfig 
+    }, { quoted: quotedContact });
 
-    const res = await fetch(`https://movieapi.giftedtech.co.ke/api/search/${encodeURIComponent(query)}`);
-    const json = await res.json();
+    // 🔍 Search movie
+    const searchUrl = `https://movieapi.giftedtech.co.ke/api/search/${encodeURIComponent(query)}`;
+    const searchRes = await axios.get(searchUrl, { timeout: 15000 });
 
-    const items = json.results?.items || json.results || [];
-    if (items.length === 0) {
-      return reply(`❌ No movies found for *${query}*`);
+    if (!searchRes.data || searchRes.data.length === 0) {
+      return conn.sendMessage(from, { 
+        text: `❌ No results found for *${query}*`, 
+        ...newsletterConfig 
+      }, { quoted: quotedContact });
     }
 
-    const results = items.slice(0, 5);
-
-    let textMsg = `🟩 *POPKID MOVIE FINDER*\n\n🎬 *Results for:* _${query}_\n\nReply with a number *(1–5)* to choose a movie.\n\n`;
-    results.forEach((v, i) => {
-      textMsg += `*${i + 1}.* ${v.title || v.name || "Unknown"} (${v.year || "?"})\n`;
-    });
-
-    // Save results by chat id, not sender
-    movieSelections[from] = results;
+    const movie = searchRes.data[0];
+    const movieId = movie.id;
 
     await conn.sendMessage(from, {
-      text: textMsg,
-      contextInfo: {
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: "120363289379419860@newsletter",
-          newsletterName: "Popkid XTR",
-          serverMessageId: 202
-        }
-      }
-    }, { quoted: mek });
+      image: { url: movie.image },
+      caption: `
+🎬 *${movie.title}*
+📅 Year: ${movie.year || "Unknown"}
+⭐ Rating: ${movie.rating || "N/A"}
 
-  } catch (e) {
-    console.log(e);
-    reply(`❌ Error: ${e.message}`);
-  }
-});
+> Fetching best download quality...
+      `.trim(),
+      ...newsletterConfig
+    }, { quoted: quotedContact });
 
+    // 🎥 Get sources
+    const srcUrl = `https://movieapi.giftedtech.co.ke/api/sources/${movieId}`;
+    const srcRes = await axios.get(srcUrl, { timeout: 15000 });
 
-// ✅ LISTENER FOR USER NUMBER REPLY
-cmd({
-  pattern: ".*",  // catch all messages
-  on: "text",
-},
-async (conn, mek, m, { from, body, reply }) => {
-  try {
-    if (!movieSelections[from]) return;
-
-    const msg = body.trim();
-    const choice = parseInt(msg);
-    if (isNaN(choice) || choice < 1 || choice > 5) return;
-
-    const selectedMovie = movieSelections[from][choice - 1];
-    delete movieSelections[from];
-
-    const movieId = selectedMovie.subjectId;
-    if (!movieId) return reply("❌ Invalid selection. Try again.");
-
-    // Fetch info and sources
-    const info = await fetch(`https://movieapi.giftedtech.co.ke/api/info/${movieId}`);
-    const infoJson = await info.json();
-    const subject = infoJson.results?.subject || {};
-
-    const src = await fetch(`https://movieapi.giftedtech.co.ke/api/sources/${movieId}`);
-    const srcJson = await src.json();
-    const sources = srcJson.results || [];
-
-    if (!sources || sources.length === 0) {
-      return reply(`❌ No download found for *${subject.title || "this movie"}*`);
+    if (!Array.isArray(srcRes.data) || srcRes.data.length === 0) {
+      return conn.sendMessage(from, { 
+        text: "⚠️ No download sources available for this movie.", 
+        ...newsletterConfig 
+      }, { quoted: quotedContact });
     }
 
-    // Pick best quality
-    const best = sources.sort((a, b) => parseInt(b.quality) - parseInt(a.quality))[0];
+    // Choose highest quality
+    const sorted = srcRes.data.sort((a, b) => parseInt(b.quality) - parseInt(a.quality));
+    const best = sorted[0];
 
     await conn.sendMessage(from, {
-      image: { url: subject.cover },
-      caption:
-        `🎬 *${subject.title}*\n\n` +
-        `📆 *Released:* ${subject.releaseDate || "?"}\n` +
-        `⭐ *Rating:* ${subject.rating || "?"}\n` +
-        `⏳ *Duration:* ${subject.duration ? Math.floor(subject.duration / 60) + " min" : "?"}\n\n` +
-        `📝 *Description:*\n${subject.description || "No description"}\n\n` +
-        `📺 *Quality:* ${best.quality}\n\n` +
-        `⬇️ Downloading now...`
-    }, {
-      quoted: mek,
-      contextInfo: {
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: "120363289379419860@newsletter",
-          newsletterName: "Popkid XTR",
-          serverMessageId: 203
-        }
-      }
+      text: `📥 Downloading *${movie.title}*\nQuality: *${best.quality}p*\n\nPlease wait...`,
+      ...newsletterConfig
+    }, { quoted: quotedContact });
+
+    // 🎬 Download movie
+    const videoResp = await axios.get(best.download_url, {
+      responseType: "arraybuffer",
+      timeout: 120000,
+      maxContentLength: 500 * 1024 * 1024, // 500MB
     });
 
-    // Send download file
+    const buffer = Buffer.from(videoResp.data);
+
+    if (buffer.length < 5000) {
+      return conn.sendMessage(from, { 
+        text: "❌ Invalid movie file received.", 
+        ...newsletterConfig 
+      }, { quoted: quotedContact });
+    }
+
+    // 📦 Send as document (.mp4)
     await conn.sendMessage(from, {
-      document: { url: best.download_url },
-      mimetype: "application/octet-stream",
-      fileName: `${subject.title || "movie"}-${best.quality}.mp4`,
-      caption: `🎞️ *${subject.title || "Movie"}* • ${best.quality}`
-    });
+      document: buffer,
+      mimetype: "video/mp4",
+      fileName: `${movie.title}.mp4`,
+      caption: `🎬 *${movie.title}*\n📥 Download Complete\nQuality: *${best.quality}p*`,
+      ...newsletterConfig
+    }, { quoted: quotedContact });
 
-  } catch (e) {
-    console.log(e);
-    reply(`❌ Error: ${e.message}`);
+    await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
+
+  } catch (err) {
+    console.error("Movie Downloader Error:", err);
+    await conn.sendMessage(from, { 
+      text: "❌ Something went wrong while fetching movie!", 
+      ...newsletterConfig 
+    }, { quoted: quotedContact });
   }
 });
