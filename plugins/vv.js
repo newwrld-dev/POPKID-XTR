@@ -1,94 +1,83 @@
-// 🌟 coded by WHITESHADOW x Umar
-const { cmd } = require("../command");
+const { cmd } = require('../command');
+const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
 cmd({
-  pattern: "vv",
-  alias: ["viewonce", "view", "open"],
-  react: "🔪",
-  desc: "Owner Only - retrieve quoted message back to user",
-  category: "owner",
-  filename: __filename
-}, async (client, message, match, { from, isCreator, sender }) => {
-  try {
-    // React on command usage
-    await client.sendMessage(from, { react: { text: "🥺", key: message.key } });
+    pattern: "vv",
+    alias: ["viewonce", "reveal"],
+    desc: "Reveal view-once image or video",
+    category: "tools",
+    react: "👁️",
+    filename: __filename
+},
+async (conn, mek, m, { from, sender, reply }) => {
+    try {
+        const quoted =
+            mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-    // Owner check
-    if (!isCreator) {
-      await client.sendMessage(from, { react: { text: "😎", key: message.key } });
-      return await client.sendMessage(from, {
-        text: "*🚫 This command is restricted to the bot owner only.*"
-      }, { quoted: message });
-    }
-
-    // Check if a message was quoted
-    if (!match.quoted) {
-      await client.sendMessage(from, { react: { text: "☺️", key: message.key } });
-      return await client.sendMessage(from, {
-        text: "*⚠️ Please reply to a private photo, video, or audio message.*\n\n*Then use this command:* `vv`\n\n*Watch the magic happen!* 😎"
-      }, { quoted: message });
-    }
-
-    const buffer = await match.quoted.download();
-    const mtype = match.quoted.mtype;
-    const options = { 
-      quoted: message,
-      contextInfo: {
-        mentionedJid: [sender],
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: '120363289379419860@newsletter',
-          newsletterName: "popkid xtr",
-          serverMessageId: 143
+        if (!quoted) {
+            return reply("❌ Reply to a *view-once image or video*.");
         }
-      }
-    };
-    let messageContent = {};
 
-    switch (mtype) {
-      case "imageMessage":
-        messageContent = {
-          image: buffer,
-          caption: match.quoted.text || "",
-          mimetype: match.quoted.mimetype || "image/jpeg"
-        };
-        break;
+        // Handle view-once wrapper (Baileys v6+)
+        const viewOnceMsg =
+            quoted.viewOnceMessageV2 ||
+            quoted.viewOnceMessage ||
+            null;
 
-      case "videoMessage":
-        messageContent = {
-          video: buffer,
-          caption: match.quoted.text || "",
-          mimetype: match.quoted.mimetype || "video/mp4"
-        };
-        break;
+        const mediaMessage =
+            viewOnceMsg?.message?.imageMessage ||
+            viewOnceMsg?.message?.videoMessage ||
+            quoted.imageMessage ||
+            quoted.videoMessage;
 
-      case "audioMessage":
-        messageContent = {
-          audio: buffer,
-          mimetype: "audio/mp4",
-          ptt: match.quoted.ptt || false
-        };
-        break;
+        if (!mediaMessage) {
+            return reply("❌ Unsupported message type.");
+        }
 
-      default:
-        await client.sendMessage(from, { react: { text: "😥", key: message.key } });
-        return await client.sendMessage(from, {
-          text: "*⚠️ Please reply to a view-once photo, private video, audio, or file to use this command.*"
-        }, { quoted: message });
+        const isImage = !!mediaMessage.imageMessage || mediaMessage.mimetype?.startsWith("image");
+        const isVideo = !!mediaMessage.videoMessage || mediaMessage.mimetype?.startsWith("video");
+
+        if (!mediaMessage.viewOnce) {
+            return reply("❌ This is not a view-once media.");
+        }
+
+        // Ping-style reaction
+        const reactionEmojis = ['🔥','⚡','🚀','💨','🎯','🎉','🌟','💥','👁️'];
+        const reactEmoji = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
+
+        await conn.sendMessage(from, {
+            react: { text: reactEmoji, key: mek.key }
+        });
+
+        // Download media
+        const stream = await downloadContentFromMessage(
+            mediaMessage,
+            isImage ? "image" : "video"
+        );
+
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+
+        // Send revealed media (NOT view-once)
+        await conn.sendMessage(from, {
+            [isImage ? "image" : "video"]: buffer,
+            caption: mediaMessage.caption || '',
+            contextInfo: {
+                mentionedJid: [sender],
+                forwardingScore: 999,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: "120363289379419860@newsletter",
+                    newsletterName: "Popkid XTR",
+                    serverMessageId: 143
+                }
+            }
+        }, { quoted: mek });
+
+    } catch (err) {
+        console.error("VV Command Error:", err);
+        reply("❌ Failed to reveal view-once media.");
     }
-
-    // Send the retrieved media with modern forwarding style
-    await client.sendMessage(from, messageContent, options);
-
-    // React on success
-    await client.sendMessage(from, { react: { text: "😃", key: message.key } });
-
-  } catch (error) {
-    console.error("vv Error:", error);
-    await client.sendMessage(from, { react: { text: "😔", key: message.key } });
-    await client.sendMessage(from, {
-      text: "❌ ERROR:\n" + error.message
-    }, { quoted: message });
-  }
 });
