@@ -24,7 +24,7 @@ END:VCARD`
 };
 
 cmd({
-  pattern: "play",
+  pattern: "play2",
   alias: ["ytplay", "song", "yta"],
   react: "🎵",
   desc: "Download YouTube audio using GiftedTech API",
