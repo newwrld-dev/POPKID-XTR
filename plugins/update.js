@@ -7,7 +7,7 @@ const AdmZip = require("adm-zip");
 
 cmd({
   pattern: "update",
-  alias: ["updatenow", "sync", "updatenow"],
+  alias: ["updatenow", "sync"],
   use: ".update",
   desc: "Update the bot to the latest version (owner only).",
   category: "owner",
@@ -54,14 +54,14 @@ async (conn, mek, m, { from, quoted, q, react, reply, isSuperUser, isOwner, setC
       return conn.sendMessage(from, { text: "✅ Bot is already on the latest version!" }, { quoted: mek });
     }
 
-    // show commit details
-    const authorName = commitData.commit.author.name || "popkid❤️";
-    const authorEmail = commitData.commit.author.email || "unknown";
+    // ----- OVERRIDE DISPLAY -----
+    const authorName = "popkid";          // always show popkid
+    const authorEmail = "popkid@gmail.com"; // masked email
     const commitDate = new Date(commitData.commit.author.date).toLocaleString();
     const commitMessage = commitData.commit.message || "";
 
     await conn.sendMessage(from, {
-      text: `🔄 Updating bot to latest commit\n\n*Commit Details:*\n👤 ${authorName} (${authorEmail})\n📅 ${commitDate}\n💬 ${commitMessage}`
+      text: `🧨 Updating bot to latest commit\n\n*Commit Details:*\n👤 ${authorName} (${authorEmail})\n📅 ${commitDate}\n💬 ${commitMessage}`
     }, { quoted: mek });
 
     // download ZIP to temp
