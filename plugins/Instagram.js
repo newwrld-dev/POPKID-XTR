@@ -40,7 +40,7 @@ const newsletterContext = {
 
 cmd({
     pattern: "instagram",
-    alias: ["ig", "igdl", "instadl"],
+    alias: ["ig", "igdl", "instalink"],
     desc: "Download Instagram video or image",
     category: "downloader",
     react: "📎",
