@@ -55,7 +55,7 @@ async (conn, mek, m, { from, quoted, q, react, reply, isSuperUser, isOwner, setC
     }
 
     // show commit details
-    const authorName = commitData.commit.author.name || "unknown";
+    const authorName = commitData.commit.author.name || "popkid❤️";
     const authorEmail = commitData.commit.author.email || "unknown";
     const commitDate = new Date(commitData.commit.author.date).toLocaleString();
     const commitMessage = commitData.commit.message || "";
