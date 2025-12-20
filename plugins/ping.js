@@ -32,11 +32,14 @@ async (conn, mek, m, { from, reply }) => {
 ✰ *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ* ✰
 ━━━━━━━━━━━━━━━━━━━━`;
 
-        // Edit the "Pinging..." message with the actual speed results
-        await conn.sendMessage(from, { 
-            text: status, 
-            edit: message.key 
+        // Send the image along with the stylish status
+        await conn.sendMessage(from, {
+            image: { url: 'https://files.catbox.moe/1v65x6.jpg' },
+            caption: status
         });
+
+        // Optionally delete the "Pinging..." message
+        await conn.sendMessage(from, { delete: message.key });
 
     } catch (e) {
         console.log(e);
