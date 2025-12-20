@@ -18,7 +18,12 @@
       "required": true,
       "value": "POPKID-XTR"
     }, 
-      
+
+    "CUSTOM_STATUS_EMOJIS": {
+      "description": "feed in emoji of your desire.",
+      "required": true,
+      "value": "✌️"
+    }, 
     "PREFIX": {
       "description": "paste your bot prefix note! Don't apply null prefix.",
       "required": false,
