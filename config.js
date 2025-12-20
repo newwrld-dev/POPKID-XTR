@@ -13,7 +13,7 @@ AUTO_STATUS_REPLY: process.env.AUTO_STATUS_REPLY || "false",
 // make true if you want auto reply on status 
 AUTO_STATUS_REACT: process.env.AUTO_STATUS_REACT || "true",
 //anticall on/off
-   ANTI_CALL: process.env.ANTI_CALL || "true",
+ANTI_CALL: process.env.ANTI_CALL || "true",
 // make true if you want auto reply on status 
 AUTO_STATUS_MSG: process.env.AUTO_STATUS_MSG || "*𝐏𝐎𝐏𝐊𝐈𝐃 𝐌𝐃 𝐕𝐈𝐄𝐖𝐄𝐃✅*",
 // set the auto reply massage on status reply  
@@ -25,9 +25,9 @@ WELCOME: process.env.WELCOME || "false",
 // true if want welcome and goodbye msg in groups    
 ADMIN_EVENTS: process.env.ADMIN_EVENTS || "true",
 // make true to know who dismiss or promoted a member in group. 
- LINK_WHITELIST: "youtube.com,github.com", 
-    LINK_ACTION:  "mute", // "kick", "mute", or "none"
-    LINK_WARN_LIMIT: 3, // Number of warnings before action
+LINK_WHITELIST: "youtube.com,github.com", 
+LINK_ACTION:  "mute", // "kick", "mute", or "none"
+LINK_WARN_LIMIT: 3, // Number of warnings before action
 ANTI_LINK: process.env.ANTI_LINK || "false",
 // make anti link true,false for groups 
 MENTION_REPLY: process.env.MENTION_REPLY || "false",
@@ -36,10 +36,10 @@ MENU_IMAGE_URL: process.env.MENU_IMAGE_URL || "https://files.catbox.moe/d1stg5.j
 // add custom menu and mention reply image url
 PREFIX: process.env.PREFIX || ".",
     
-    AUTO_BIO: process.env.AUTO_BIO || "true",// Replace with your authorized numbers
+AUTO_BIO: process.env.AUTO_BIO || "true",// Replace with your authorized numbers
     
   // Timezone for the auto-bio feature
-    TIME_ZONE: process.env.TIME_ZONE || "Asia/Kolkata",  // Change to your preferred timezone
+TIME_ZONE: process.env.TIME_ZONE || "Asia/Kolkata",  // Change to your preferred timezone
 // add your prifix for bot   
 BOT_NAME: process.env.BOT_NAME || "𝐏𝐎𝐏𝐊𝐈𝐃 𝐌𝐃",
 // add bot namw here for menu
