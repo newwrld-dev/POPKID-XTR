@@ -14,47 +14,61 @@ const quotedContact = {
   }
 };
 
-// API FETCH HELPERS
-const AXIOS_DEFAULTS = { timeout: 60000, headers: { 'User-Agent': 'Mozilla/5.0' } };
+// API CONFIGS
+const izumi = { baseURL: "https://izumiiiiiiii.dpdns.org" };
+const AXIOS_DEFAULTS = {
+  timeout: 60000,
+  headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
+};
 
-async function fetchVideo(url, quality) {
-  // Primary: Izumi API (Supports format selection)
-  const api = `https://izumiiiiiiii.dpdns.org/downloader/youtube?url=${encodeURIComponent(url)}&format=${quality}`;
-  const res = await axios.get(api, AXIOS_DEFAULTS);
-  if (res?.data?.result?.download) return res.data.result.download;
-  
-  // Fallback: Okatsu (Default HD)
-  const fallback = `https://okatsu-rolezapiiz.vercel.app/downloader/ytmp4?url=${encodeURIComponent(url)}`;
-  const res2 = await axios.get(fallback, AXIOS_DEFAULTS);
-  return res2.data.result.mp4;
+async function tryRequest(getter, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try { return await getter(); } catch (err) { lastError = err; await new Promise(r => setTimeout(r, 1000)); }
+  }
+  throw lastError;
+}
+
+async function getIzumiVideo(url) {
+  const api = `${izumi.baseURL}/downloader/youtube?url=${encodeURIComponent(url)}&format=720`;
+  const res = await tryRequest(() => axios.get(api, AXIOS_DEFAULTS));
+  if (res?.data?.result?.download) return res.data.result;
+  throw new Error("Izumi Error");
+}
+
+async function getOkatsu(url) {
+  const api = `https://okatsu-rolezapiiz.vercel.app/downloader/ytmp4?url=${encodeURIComponent(url)}`;
+  const res = await tryRequest(() => axios.get(api, AXIOS_DEFAULTS));
+  if (res?.data?.result?.mp4) return { download: res.data.result.mp4, title: res.data.result.title };
+  throw new Error("Okatsu Error");
 }
 
 // ───────────────────────────────────────────────
-//        ADVANCED VIDEO COMMAND W/ SELECTOR
+//        ADVANCED VIDEO COMMAND
 // ───────────────────────────────────────────────
 cmd({
   pattern: "video",
   alias: ["ytvideo", "mp4"],
   react: "🎬",
-  desc: "Video extraction with quality selector.",
+  desc: "High-speed video extraction.",
   category: "download",
-  use: ".video <query>",
+  use: ".video <query/link>",
   filename: __filename
 }, async (conn, mek, m, { from, reply, q, sender }) => {
   try {
     const input = q?.trim() || "";
     if (!input) return reply("⚙️ *SYSTEM:* Input required.");
 
-    // --- PHASE 1: SEARCHING ---
+    // --- PHASE 1: INITIAL SCAN ---
     await conn.sendMessage(from, { react: { text: "📡", key: mek.key } });
 
-    let techHeader = `╔════════════════╗
+    let techHeader = `╔══════════════════════╗
    ✰  **𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄** ✰
-╟──────────────╢
-│ ✞︎ *sᴛᴀᴛᴜs:* sᴄᴀɴɴɪɴɢ... 🎬
-│ ✞︎ *ᴘʀᴏᴄᴇss:* ᴅᴀᴛᴀ_sᴄᴀɴ
-│ ✞︎ *ʟᴏᴀᴅ:* [▬▬▬▭▭▭▭] 30%
-╚════════════════╝`;
+╟──────────────────────╢
+│ ✞︎ **sᴛᴀᴛᴜs:** sᴇᴀʀᴄʜɪɴɢ... 🎬
+│ ✞︎ **ᴘʀᴏᴄᴇss:** ᴅᴀᴛᴀ_sᴄᴀɴ
+│ ✞︎ **ʟᴏᴀᴅ:** [▬▬▬▭▭▭▭] 30%
+╚══════════════════════╝`;
 
     const { key } = await conn.sendMessage(from, { text: techHeader }, { quoted: mek });
 
@@ -64,71 +78,52 @@ cmd({
     if (!input.startsWith("http")) {
       const search = await ytsearch(input);
       const v = search?.results?.[0];
-      if (!v) return await conn.sendMessage(from, { text: "❌ **CORE ERROR:** NOT FOUND", edit: key });
+      if (!v) return await conn.sendMessage(from, { text: "❌ **CORE ERROR:** NO RESULTS FOUND", edit: key });
+
       videoUrl = v.url;
       videoMeta = v;
     }
 
-    // --- PHASE 2: QUALITY SELECTION ---
-    let selectionMsg = `╔═══════════════╗
-   ✰  *𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄* ✰
-╟──────────────╢
+    // --- PHASE 2: UPDATE BOX ---
+    let downloadHeader = `╔══════════════════════╗
+   ✰  **𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄** ✰
+╟──────────────────────╢
 │ ✞︎ **ᴛɪᴛʟᴇ:** ${videoMeta.title.substring(0, 20)}...
 │ ✞︎ **ᴅᴜʀᴀᴛɪᴏɴ:** ${videoMeta.timestamp || 'HD'}
-╟───────────────╢
-│  **sᴇʟᴇᴄᴛ ʀᴇsᴏʟᴜᴛɪᴏɴ:**
-│
-│  1 ➮ **𝟹𝟼𝟶ᴘ (ʟᴏᴡ ᴅᴀᴛᴀ)** 📉
-│  2 ➮ **𝟽𝟸𝟶ᴘ (ʜɪɢʜ ᴅᴇғ)** 🎬
-╟───────────────╢
-│ 📥 **ʟᴏᴀᴅ:** [▬▬▬▬▬▬▬] 100%
-╚═══════════════╝
-> *Reply with 1 or 2*`;
+│ ✞︎ **ʟᴏᴀᴅ:** [▬▬▬▬▬▬▬] 100%
+╟──────────────────────╢
+│ 📥 **sᴛᴀᴛᴜs:** ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...
+╚══════════════════════╝`;
 
-    await conn.sendMessage(from, { text: selectionMsg, edit: key });
+    await conn.sendMessage(from, { text: downloadHeader, edit: key });
 
-    // --- PHASE 3: INTERACTIVE LISTENER ---
-    const listener = async (msg) => {
-      const isReply = msg.message?.extendedTextMessage?.contextInfo?.stanzaId === key.id;
-      const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
+    // Download video (Izumi → Okatsu fallback)
+    let video;
+    try {
+      video = await getIzumiVideo(videoUrl);
+    } catch (e) {
+      video = await getOkatsu(videoUrl);
+    }
 
-      if (isReply && msg.key.remoteJid === from && ['1', '2'].includes(body)) {
-        conn.ev.off('messages.upsert', listener); // Stop listening
-
-        const quality = body === '1' ? '360' : '720';
-        
-        // Update box to show "Downloading"
-        await conn.sendMessage(from, { 
-          text: selectionMsg.replace('sᴇʟᴇᴄᴛ ʀᴇsᴏʟᴜᴛɪᴏɴ:', `📥 **ᴘʀᴇᴘᴀʀɪɴɢ ${quality}ᴘ...**`), 
-          edit: key 
-        });
-
-        const downloadLink = await fetchVideo(videoUrl, quality);
-
-        // --- PHASE 4: TRANSMISSION ---
-        await conn.sendMessage(from, {
-          video: { url: downloadLink },
-          mimetype: "video/mp4",
-          caption: `🎬 *${videoMeta.title}*\n📡 *Quality:* ${quality}p\n\n> © ᴘᴏᴘᴋɪᴅ ᴍᴇᴅɪᴀ ⚡`,
-          contextInfo: {
-            mentionedJid: [sender],
-            forwardingScore: 999,
-            isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-              newsletterJid: '120363289379419860@newsletter',
-              newsletterName: `『 𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 ${quality}𝐏 』`,
-              serverMessageId: 143
-            }
-          }
-        }, { quoted: quotedContact });
-
-        await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
+    // --- PHASE 3: TRANSMISSION ---
+    await conn.sendMessage(from, {
+      video: { url: video.download },
+      mimetype: "video/mp4",
+      fileName: `${video.title || "POPKID"}.mp4`,
+      caption: `🎬 *${video.title || videoMeta.title}*\n\n> © ᴘᴏᴘᴋɪᴅ ᴍᴇᴅɪᴀ ⚡`,
+      contextInfo: {
+        mentionedJid: [sender],
+        forwardingScore: 999,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: '120363289379419860@newsletter',
+          newsletterName: '『 𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐕𝐈𝐃𝐄𝐎 』',
+          serverMessageId: 143
+        }
       }
-    };
+    }, { quoted: quotedContact });
 
-    conn.ev.on('messages.upsert', async (chatUpdate) => {
-      for (const msg of chatUpdate.messages) { await listener(msg); }
-    });
+    await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
 
   } catch (err) {
     console.error(err);
