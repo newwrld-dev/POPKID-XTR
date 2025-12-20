@@ -5,158 +5,133 @@ const config = require("../config");
 
 // POPKID VERIFIED CONTACT
 const quotedContact = {
-  key: {
-    fromMe: false,
-    participant: `0@s.whatsapp.net`,
-    remoteJid: "status@broadcast"
-  },
+  key: { fromMe: false, participant: `0@s.whatsapp.net`, remoteJid: "status@broadcast" },
   message: {
     contactMessage: {
-      displayName: "POP KIDS VERIFIED ✅",
-      vcard: `BEGIN:VCARD
-VERSION:3.0
-FN:POP KIDS VERIFIED ✅
-ORG:POP KIDS BOT;
-TEL;type=CELL;type=VOICE;waid=${config.OWNER_NUMBER || '0000000000'}:+${config.OWNER_NUMBER || '0000000000'}
-END:VCARD`
+      displayName: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏʀᴇ ✅",
+      vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏʀᴇ ✅\nORG:POP KID TECH;\nTEL;type=CELL;type=VOICE;waid=${config.OWNER_NUMBER || '0000000000'}:+${config.OWNER_NUMBER || '0000000000'}\nEND:VCARD`
     }
   }
 };
 
-// Newsletter style
-const newsletterConfig = {
-  contextInfo: {
-    mentionedJid: [],
-    forwardingScore: 999,
-    isForwarded: true,
-    forwardedNewsletterMessageInfo: {
-      newsletterJid: '120363289379419860@newsletter',
-      newsletterName: '𝐏𝐎𝐏𝐊𝐈𝐃',
-      serverMessageId: 143
-    }
-  }
-};
+// API FETCH HELPERS
+const AXIOS_DEFAULTS = { timeout: 60000, headers: { 'User-Agent': 'Mozilla/5.0' } };
 
-// API CONFIGS
-const izumi = {
-  baseURL: "https://izumiiiiiiii.dpdns.org"
-};
-
-const AXIOS_DEFAULTS = {
-  timeout: 60000,
-  headers: {
-    'User-Agent': 'Mozilla/5.0',
-    'Accept': 'application/json, text/plain, */*'
-  }
-};
-
-// Retry helper
-async function tryRequest(getter, attempts = 3) {
-  let lastError;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      return await getter();
-    } catch (err) {
-      lastError = err;
-      await new Promise(r => setTimeout(r, attempt * 1000));
-    }
-  }
-  throw lastError;
+async function fetchVideo(url, quality) {
+  // Primary: Izumi API (Supports format selection)
+  const api = `https://izumiiiiiiii.dpdns.org/downloader/youtube?url=${encodeURIComponent(url)}&format=${quality}`;
+  const res = await axios.get(api, AXIOS_DEFAULTS);
+  if (res?.data?.result?.download) return res.data.result.download;
+  
+  // Fallback: Okatsu (Default HD)
+  const fallback = `https://okatsu-rolezapiiz.vercel.app/downloader/ytmp4?url=${encodeURIComponent(url)}`;
+  const res2 = await axios.get(fallback, AXIOS_DEFAULTS);
+  return res2.data.result.mp4;
 }
-
-// Izumi video downloader
-async function getIzumiVideo(url) {
-  const api = `${izumi.baseURL}/downloader/youtube?url=${encodeURIComponent(url)}&format=720`;
-  const res = await tryRequest(() => axios.get(api, AXIOS_DEFAULTS));
-  if (res?.data?.result?.download) return res.data.result;
-  throw new Error("Izumi no download");
-}
-
-// Okatsu backup
-async function getOkatsu(url) {
-  const api = `https://okatsu-rolezapiiz.vercel.app/downloader/ytmp4?url=${encodeURIComponent(url)}`;
-  const res = await tryRequest(() => axios.get(api, AXIOS_DEFAULTS));
-  if (res?.data?.result?.mp4)
-    return {
-      download: res.data.result.mp4,
-      title: res.data.result.title
-    };
-  throw new Error("Okatsu no mp4");
-}
-
 
 // ───────────────────────────────────────────────
-//        VIDEO COMMAND (POP KIDS STYLE)
+//        ADVANCED VIDEO COMMAND W/ SELECTOR
 // ───────────────────────────────────────────────
 cmd({
   pattern: "video",
-  alias: ["ytvideo", "mp4", "playvideo"],
+  alias: ["ytvideo", "mp4"],
   react: "🎬",
-  desc: "Download YouTube videos using Izumi & Okatsu API",
+  desc: "Video extraction with quality selector.",
   category: "download",
-  use: ".video <song or link>",
+  use: ".video <query>",
   filename: __filename
 }, async (conn, mek, m, { from, reply, q, sender }) => {
-
-  newsletterConfig.contextInfo.mentionedJid = [sender];
-
   try {
     const input = q?.trim() || "";
-    if (!input) return reply("🎬 What video should I fetch?");
+    if (!input) return reply("⚙️ *SYSTEM:* Input required.");
 
-    await conn.sendMessage(from, { react: { text: "🔎", key: mek.key } });
-    await conn.sendMessage(from, { text: `🎬 Searching for: *${input}*`, ...newsletterConfig }, { quoted: quotedContact });
+    // --- PHASE 1: SEARCHING ---
+    await conn.sendMessage(from, { react: { text: "📡", key: mek.key } });
 
-    // Determine if the input is a link
+    let techHeader = `╔════════════════╗
+   ✰  **𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄** ✰
+╟──────────────╢
+│ ✞︎ *sᴛᴀᴛᴜs:* sᴄᴀɴɴɪɴɢ... 🎬
+│ ✞︎ *ᴘʀᴏᴄᴇss:* ᴅᴀᴛᴀ_sᴄᴀɴ
+│ ✞︎ *ʟᴏᴀᴅ:* [▬▬▬▭▭▭▭] 30%
+╚════════════════╝`;
+
+    const { key } = await conn.sendMessage(from, { text: techHeader }, { quoted: mek });
+
     let videoUrl = input;
-    let videoMeta = {};
+    let videoMeta = { title: "Video File" };
 
     if (!input.startsWith("http")) {
-      // Search YouTube
       const search = await ytsearch(input);
       const v = search?.results?.[0];
-      if (!v) return reply("❌ No results found!");
-
+      if (!v) return await conn.sendMessage(from, { text: "❌ **CORE ERROR:** NOT FOUND", edit: key });
       videoUrl = v.url;
       videoMeta = v;
-
-      // Send searching thumbnail card
-      await conn.sendMessage(from, {
-        image: { url: v.thumbnail },
-        caption: `
-🎥 *POP KID VIDEO DOWNLOADER*
-💛🤎💜💚💛💞✅
-📝 *Title:* ${v.title}
-⏱ *Duration:* ${v.timestamp}
-👤 *Author:* ${v.author?.name}
-> 📥 Preparing download...
-`.trim(),
-        ...newsletterConfig
-      }, { quoted: quotedContact });
     }
 
-    // Download video (Izumi → Okatsu fallback)
-    let video;
-    try {
-      video = await getIzumiVideo(videoUrl);
-    } catch (e) {
-      video = await getOkatsu(videoUrl);
-    }
+    // --- PHASE 2: QUALITY SELECTION ---
+    let selectionMsg = `╔═══════════════╗
+   ✰  *𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄* ✰
+╟──────────────╢
+│ ✞︎ **ᴛɪᴛʟᴇ:** ${videoMeta.title.substring(0, 20)}...
+│ ✞︎ **ᴅᴜʀᴀᴛɪᴏɴ:** ${videoMeta.timestamp || 'HD'}
+╟───────────────╢
+│  **sᴇʟᴇᴄᴛ ʀᴇsᴏʟᴜᴛɪᴏɴ:**
+│
+│  1 ➮ **𝟹𝟼𝟶ᴘ (ʟᴏᴡ ᴅᴀᴛᴀ)** 📉
+│  2 ➮ **𝟽𝟸𝟶ᴘ (ʜɪɢʜ ᴅᴇғ)** 🎬
+╟───────────────╢
+│ 📥 **ʟᴏᴀᴅ:** [▬▬▬▬▬▬▬] 100%
+╚═══════════════╝
+> *Reply with 1 or 2*`;
 
-    // Final sending
-    await conn.sendMessage(from, {
-      video: { url: video.download },
-      mimetype: "video/mp4",
-      fileName: `${video.title || videoMeta.title || "video"}.mp4`,
-      caption: `🎬 *${video.title || videoMeta.title}*\n\n> _POP KIDS MEDIA_`,
-      ...newsletterConfig
-    }, { quoted: quotedContact });
+    await conn.sendMessage(from, { text: selectionMsg, edit: key });
 
-    await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
+    // --- PHASE 3: INTERACTIVE LISTENER ---
+    const listener = async (msg) => {
+      const isReply = msg.message?.extendedTextMessage?.contextInfo?.stanzaId === key.id;
+      const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
+
+      if (isReply && msg.key.remoteJid === from && ['1', '2'].includes(body)) {
+        conn.ev.off('messages.upsert', listener); // Stop listening
+
+        const quality = body === '1' ? '360' : '720';
+        
+        // Update box to show "Downloading"
+        await conn.sendMessage(from, { 
+          text: selectionMsg.replace('sᴇʟᴇᴄᴛ ʀᴇsᴏʟᴜᴛɪᴏɴ:', `📥 **ᴘʀᴇᴘᴀʀɪɴɢ ${quality}ᴘ...**`), 
+          edit: key 
+        });
+
+        const downloadLink = await fetchVideo(videoUrl, quality);
+
+        // --- PHASE 4: TRANSMISSION ---
+        await conn.sendMessage(from, {
+          video: { url: downloadLink },
+          mimetype: "video/mp4",
+          caption: `🎬 *${videoMeta.title}*\n📡 *Quality:* ${quality}p\n\n> © ᴘᴏᴘᴋɪᴅ ᴍᴇᴅɪᴀ ⚡`,
+          contextInfo: {
+            mentionedJid: [sender],
+            forwardingScore: 999,
+            isForwarded: true,
+            forwardedNewsletterMessageInfo: {
+              newsletterJid: '120363289379419860@newsletter',
+              newsletterName: `『 𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 ${quality}𝐏 』`,
+              serverMessageId: 143
+            }
+          }
+        }, { quoted: quotedContact });
+
+        await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
+      }
+    };
+
+    conn.ev.on('messages.upsert', async (chatUpdate) => {
+      for (const msg of chatUpdate.messages) { await listener(msg); }
+    });
 
   } catch (err) {
-    console.error("[VIDEO ERROR]:", err);
-    await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
-    reply("⚠️ Failed to download video.");
+    console.error(err);
+    await conn.sendMessage(from, { text: "⚠️ **SYSTEM FATAL ERROR**", edit: key });
   }
 });
