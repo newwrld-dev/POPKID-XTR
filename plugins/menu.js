@@ -7,7 +7,7 @@ const { getPrefix } = require('../lib/prefix');
 const fs = require('fs');
 const path = require('path');
 
-// Quoted Contact Message (from BMB style)
+// Quoted Contact Message (Verified Style)
 const quotedContact = {
   key: {
     fromMe: false,
@@ -46,33 +46,17 @@ const emojiByCategory = {
   ai: '🤖',
   anime: '🍥',
   audio: '🎧',
-  bible: '📖',
-  download: '⬇️',
-  downloader: '📥',
+  download: '📥',
   fun: '🎮',
-  game: '🕹️',
   group: '👥',
-  img_edit: '🖌️',
-  info: 'ℹ️',
-  information: '🧠',
-  logo: '🖼️',
+  info: '🧠',
   main: '🏠',
-  media: '🎞️',
-  menu: '📜',
-  misc: '📦',
   music: '🎵',
-  other: '📁',
   owner: '👑',
-  privacy: '🔒',
   search: '🔎',
   settings: '⚙️',
   sticker: '🌟',
   tools: '🛠️',
-  user: '👤',
-  utilities: '🧰',
-  utility: '🧮',
-  wallpapers: '🖼️',
-  whatsapp: '📱',
 };
 
 cmd({
@@ -80,15 +64,11 @@ cmd({
   alias: ['allmenu'],
   desc: 'Show all bot commands',
   category: 'menu',
-  react: '🪀',
+  react: '⚡',
   filename: __filename
 }, async (conn, mek, m, { from, sender, reply }) => {
   try {
     const prefix = getPrefix();
-    const timezone = config.TIMEZONE || 'Africa/Nairobi';
-    const time = moment().tz(timezone).format('HH:mm:ss');
-    const date = moment().tz(timezone).format('dddd, DD MMMM YYYY');
-
     const uptime = () => {
       let sec = process.uptime();
       let h = Math.floor(sec / 3600);
@@ -97,26 +77,20 @@ cmd({
       return `${h}h ${m}m ${s}s`;
     };
 
-    // Random menu image (BMB style)
-    const randomIndex = Math.floor(Math.random() * 10) + 1;
-    const imagePath = path.join(__dirname, '..', 'plugins', `menu${randomIndex}.jpg`);
-    let imageBuffer;
-    try { imageBuffer = fs.readFileSync(imagePath); } catch { imageBuffer = null; }
+    // --- STYLIZED MENU HEADER ---
+    let menu = `╔══════════════════════╗
+   ✰  **𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐕𝟐** ✰
+╚══════════════════════╝
+┌──────────────────────┐
+│ ✞︎ **ᴜsᴇʀ:** @${sender.split("@")[0]}
+│ ✞︎ **ᴜᴘᴛɪᴍᴇ:** ${uptime()}
+│ ✞︎ **ᴍᴏᴅᴇ:** ${config.MODE}
+│ ✞︎ **ᴘʀᴇғɪx:** ${prefix}
+│ ✞︎ **ᴘʟᴜɢɪɴs:** ${commands.length}
+└──────────────────────┘
+━━━━━━━━━━━━━━━━━━━━━━`;
 
-    // Menu header (BMB style)
-    let menu = `
-╭━━━《 ⚙️ ᴘᴏᴘᴋɪᴅ BOT ⚙️ 》━━━┈⊷
-┃▸ User     : @${sender.split("@")[0]}
-┃▸ Runtime  : ${uptime()}
-┃▸ Mode     : ${config.MODE}
-┃▸ Prefix   : ${config.PREFIX}
-┃▸ Owner    : ${config.OWNER_NAME}
-┃▸ Plugins  : ${commands.length}
-┃▸ Dev      : ᴘᴏᴘᴋɪᴅ
-┃▸ Version  : 2.0.0
-╰━━━━━━━━━━━━━━━━━━┈⊷`;
-
-    // Group commands by category (Popkid dynamic style)
+    // Group commands by category
     const categories = {};
     for (const cmd of commands) {
       if (cmd.category && !cmd.dontAdd && cmd.pattern) {
@@ -126,22 +100,26 @@ cmd({
       }
     }
 
+    // --- DYNAMIC CATEGORY BOXES ---
     for (const cat of Object.keys(categories).sort()) {
-      const emoji = emojiByCategory[cat] || '🧛‍♂️';
-      menu += `\n\n┏─『 ${emoji} ${toUpperStylized(cat)} ${toUpperStylized('Menu')} 』──⊷\n`;
-      for (const c of categories[cat].sort()) {
-        menu += `│ ${prefix}${c}\n`;
+      const emoji = emojiByCategory[cat] || '✨';
+      menu += `\n\n╭━━━〔 ${emoji} *${toUpperStylized(cat)}* 〕━━━┈⊷\n`;
+      
+      const categoryCmds = categories[cat].sort();
+      for (const c of categoryCmds) {
+        menu += `┃  ✞︎ ${prefix}${c}\n`;
       }
-      menu += `┗──────────────⊷`;
+      
+      menu += `╰━━━━━━━━━━━━━━━━━━━━━━┈⊷`;
     }
 
-    menu += `\n\n> ${config.DESCRIPTION || toUpperStylized('Explore the bot commands!')}`;
+    menu += `\n\n  ✰ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ** ✰\n   Stay smart • Clean • Advanced\n━━━━━━━━━━━━━━━━━━━━━━`;
 
-    // Send menu
+    // --- SEND MESSAGE ---
     await conn.sendMessage(
       from,
       {
-        image: imageBuffer ? { buffer: imageBuffer } : { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
+        image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
         caption: menu,
         contextInfo: {
           mentionedJid: [sender],
@@ -149,7 +127,7 @@ cmd({
           isForwarded: true,
           forwardedNewsletterMessageInfo: {
             newsletterJid: config.NEWSLETTER_JID || '120363289379419860@newsletter',
-            newsletterName: config.OWNER_NAME || toUpperStylized('popkid'),
+            newsletterName: "『 𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐕𝟐 』",
             serverMessageId: 143
           }
         }
@@ -157,31 +135,17 @@ cmd({
       { quoted: quotedContact }
     );
 
-    // Send audio if configured
+    // Optional Audio Trigger
     if (config.MENU_AUDIO_URL) {
-      await new Promise(r => setTimeout(r, 1000));
-      await conn.sendMessage(
-        from,
-        {
-          audio: { url: config.MENU_AUDIO_URL },
-          mimetype: 'audio/mp4',
-          ptt: true,
-          contextInfo: {
-            mentionedJid: [sender],
-            forwardingScore: 999,
-            isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-              newsletterName: config.OWNER_NAME || toUpperStylized('popkid'),
-              serverMessageId: 143
-            }
-          }
-        },
-        { quoted: quotedContact }
-      );
+      await conn.sendMessage(from, { 
+        audio: { url: config.MENU_AUDIO_URL }, 
+        mimetype: 'audio/mp4', 
+        ptt: true 
+      }, { quoted: mek });
     }
 
   } catch (e) {
-    console.error('Menu Error:', e.message);
-    await reply(`❌ ${toUpperStylized('Error')}: Failed to show menu.\n${toUpperStylized('Details')}: ${e.message}`);
+    console.error('Menu Error:', e);
+    await reply(`❌ Error loading menu: ${e.message}`);
   }
 });
