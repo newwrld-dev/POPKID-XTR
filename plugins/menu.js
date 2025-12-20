@@ -87,7 +87,7 @@ cmd({
 │ ✞︎ *ᴍᴏᴅᴇ:* ${config.MODE}
 │ ✞︎ *ᴘʀᴇғɪx:* ${prefix}
 │ ✞︎ *ᴘʟᴜɢɪɴs:* ${commands.length}
- └─────────────────┘
+✪✪✪✪✪✪✪✪✪✪✪✪✪✪✪✪
 ━━━━━━━━━━━━━━━━━━━`;
 
     // Group commands by category
