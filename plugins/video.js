@@ -4,8 +4,8 @@ const yts = require('yt-search');
 const fetch = require('node-fetch');
 
 cmd({
-    pattern: "video2",
-    alias: ["mp4", "songv"],
+    pattern: "video",
+    alias: ["mp4", "v"],
     react: "🎥",
     desc: "Download video from YouTube with tech interface.",
     category: "download",
