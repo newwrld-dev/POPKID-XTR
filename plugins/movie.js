@@ -1,113 +1,185 @@
-const { cmd } = require('../command');
 const config = require('../config');
-const fetch = require('node-fetch');
+const { cmd } = require('../command');
+const axios = require('axios');
 
+// Conversation memory
+const userChats = new Map();
+
+// Command to Turn Chatbot ON/OFF
 cmd({
-    pattern: "movie",
-    alias: ["mv", "sinhalasub", "prince"],
-    react: "🎬",
-    desc: "Premium SinhalaSub downloader with exact Prince MDX styling.",
-    category: "download",
-    use: ".movie <ne-zha-2-2025-sinhala-subtitles>",
+    pattern: "chatbot",
+    alias: ["bot", "ai"],
+    desc: "On/Off chatbot for groups or private",
+    category: "ai",
+    react: "🤖",
     filename: __filename
-}, async (conn, mek, m, { from, q, reply, sender }) => {
+}, async (conn, mek, m, { from, text, isGroup, sender }) => {
     try {
-        if (!q) return await reply("⚙️ *SYSTEM:* Input required. Please provide the movie slug.\n\n*Example:* .movie ne-zha-2-2025-sinhala-subtitles");
-
-        // --- PHASE 1: SMART URL & API HANDSHAKE ---
-        // Automatically constructs the SinhalaSub directory URL
-        const baseUrl = "https://sinhalasub.lk/movies/";
-        let movieSlug = q.trim().toLowerCase().replace(/\s+/g, '-');
-        const fullMovieUrl = `${baseUrl}${movieSlug.replace(baseUrl, '')}/`;
-
-        // Authenticated request using your SriHub API Key from the dashboard
-        const apiUrl = `https://api.srihub.store/movie/sinhalasubdl?apikey=dew_5H5Dbuh4v7NbkNRmI0Ns2u2ZK240aNnJ9lnYQXR9&url=${encodeURIComponent(fullMovieUrl)}`;
+        const args = text?.split(' ') || [];
+        const action = args[0]?.toLowerCase();
         
-        const res = await fetch(apiUrl);
-        const data = await res.json();
-
-        if (!data.status || !data.result) {
-            return await reply("❌ **CORE ERROR:** Extraction failed. Check if the movie slug matches the Sinhalasub URL.");
+        if (!action) {
+            return await conn.sendMessage(from, { 
+                text: `🤖 *CHATBOT SETTINGS*\n\n` +
+                      `*.chatbot on* - Turn ON chatbot (All)\n` +
+                      `*.chatbot off* - Turn OFF chatbot (All)\n` +
+                      `*.chatbot group on* - Turn ON for group only\n` +
+                      `*.chatbot group off* - Turn OFF for group\n` +
+                      `*.chatbot private on* - Turn ON for private\n` +
+                      `*.chatbot private off* - Turn OFF for private\n\n` +
+                      `*Current Status:*\n` +
+                      `• Group Chatbot: ${config.GROUP_CHATBOT ? '✅ ON' : '❌ OFF'}\n` +
+                      `• Private Chatbot: ${config.PRIVATE_CHATBOT ? '✅ ON' : '❌ OFF'}`
+            }, { quoted: mek });
         }
-
-        const movie = data.result;
-        const links = movie.download_links; // Array of quality and server options
-
-        // --- PHASE 2: PRINCE MDX STYLE MENU CONSTRUCTION ---
-        // Styled with rounded corners and metadata labels to match your reference
-        let infoMsg = `╭──────────────────╮
-│ PRINCE MDX MOVIE DOWNLOAD
-╰──────────────────╯
-
-➠ **Title** : ${movie.title}
-➠ **Release Date**: ${movie.year || 'N/A'}
-➠ **Country** : ${movie.country || 'N/A'}
-➠ **Duration** :  IMDb: ${movie.imdb || '8.0'}  
-➠ **Movie Link** : ${fullMovieUrl}
-➠ **Categories** : ${movie.genres || 'Action,Adventure,Animation,Fantasy'}
-➠ **Director** : ${movie.director || 'N/A'}
-─────────────────────
-
-  *01 ||* Send Details
-  *02 ||* Send Images\n\n`;
-
-        // Numbering starts from 03 to ensure '11' or higher aligns with the server list
-        links.forEach((link, index) => {
-            const num = (index + 3).toString().padStart(2, '0'); 
-            infoMsg += `  *${num} ||* ${link.quality} [ ${link.size} (\`SINHALASUB SERVER\`) ]\n`;
-        });
-
-        infoMsg += `  *${(links.length + 3).toString().padStart(2, '0')} ||* Subtitles [ ---- (\`Unknown\`) ]\n`;
-        infoMsg += `\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘʀɪɴᴄᴇ ᴛᴇᴄʜ*`;
-
-        const { key } = await conn.sendMessage(from, { 
-            image: { url: movie.thumbnail || config.MENU_IMAGE_URL },
-            caption: infoMsg 
-        }, { quoted: mek });
-
-        // --- PHASE 3: INTERACTIVE CHOICE HANDLER ---
-        const listener = async (msg) => {
-            const isReply = msg.message?.extendedTextMessage?.contextInfo?.stanzaId === key.id;
-            const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-
-            if (isReply && msg.key.remoteJid === from && !isNaN(body)) {
-                const choice = parseInt(body);
-
-                // Matches the number (e.g., 11) to the corresponding link in the array
-                if (choice >= 3 && choice < (links.length + 3)) {
-                    conn.ev.off('messages.upsert', listener);
-                    const selected = links[choice - 3];
-
-                    await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
-
-                    // --- PHASE 4: DOCUMENT TRANSMISSION ---
-                    // Sent as a document to bypass compression and keep original clarity
-                    await conn.sendMessage(from, {
-                        document: { url: selected.link },
-                        mimetype: "video/mp4",
-                        fileName: `PRINCE_MDX_${movie.title.split(' ')[0]}_${selected.quality}.mp4`,
-                        caption: `${movie.title}\n( ${selected.quality} )\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘʀɪɴᴄᴇ ᴛᴇᴄʜ*`,
-                        contextInfo: {
-                            mentionedJid: [sender],
-                            isForwarded: true,
-                            forwardedNewsletterMessageInfo: {
-                                newsletterJid: '120363289379419860@newsletter',
-                                newsletterName: '『 𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐌𝐎𝐕𝐈𝐄𝐒 』'
-                            }
-                        }
-                    }, { quoted: mek });
-
-                    await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
-                }
+        
+        if (action === 'on') {
+            config.GROUP_CHATBOT = true;
+            config.PRIVATE_CHATBOT = true;
+            return await conn.sendMessage(from, { text: `✅ *Chatbot turned ON for Group and Private!*` }, { quoted: mek });
+        }
+        
+        if (action === 'off') {
+            config.GROUP_CHATBOT = false;
+            config.PRIVATE_CHATBOT = false;
+            return await conn.sendMessage(from, { text: `❌ *Chatbot turned OFF for Group and Private!*` }, { quoted: mek });
+        }
+        
+        if (action === 'group') {
+            const subAction = args[1]?.toLowerCase();
+            if (subAction === 'on') {
+                config.GROUP_CHATBOT = true;
+                return await conn.sendMessage(from, { text: `✅ *Group Chatbot is now ON!*` }, { quoted: mek });
+            } else if (subAction === 'off') {
+                config.GROUP_CHATBOT = false;
+                return await conn.sendMessage(from, { text: `❌ *Group Chatbot is now OFF!*` }, { quoted: mek });
             }
-        };
-
-        conn.ev.on('messages.upsert', async (chatUpdate) => {
-            for (const msg of chatUpdate.messages) { await listener(msg); }
-        });
-
-    } catch (error) {
-        console.error(error);
-        await reply(`❌ **SYSTEM ERROR:** Link processing failed.`);
+        }
+        
+        if (action === 'private') {
+            const subAction = args[1]?.toLowerCase();
+            if (subAction === 'on') {
+                config.PRIVATE_CHATBOT = true;
+                return await conn.sendMessage(from, { text: `✅ *Private Chatbot is now ON!*` }, { quoted: mek });
+            } else if (subAction === 'off') {
+                config.PRIVATE_CHATBOT = false;
+                return await conn.sendMessage(from, { text: `❌ *Private Chatbot is now OFF!*` }, { quoted: mek });
+            }
+        }
+        
+    } catch (e) {
+        console.error("Chatbot command error:", e);
     }
 });
+
+// System to capture and handle incoming messages
+module.exports.handleMessage = async (conn, m) => {
+    try {
+        const { body, from, isGroup, key } = m;
+
+        // CRITICAL FIX: Ignore if the message is from the bot itself
+        if (key.fromMe) return;
+
+        const message = body?.toLowerCase()?.trim();
+        if (!message) return;
+        
+        // Skip if message is a command
+        if (message.startsWith(config.PREFIX)) return;
+        
+        // Handle Group logic
+        if (isGroup && config.GROUP_CHATBOT) {
+            await handleChatbotResponse(conn, m, true);
+        }
+        
+        // Handle Private logic
+        if (!isGroup && config.PRIVATE_CHATBOT) {
+            await handleChatbotResponse(conn, m, false);
+        }
+        
+    } catch (e) {
+        console.error("Chatbot handler error:", e);
+    }
+};
+
+// Function to generate and send AI response
+async function handleChatbotResponse(conn, m, isGroup) {
+    try {
+        const { body, from, sender, key } = m;
+
+        // Extra safety check to prevent infinite loops
+        const botId = conn.user.id.split(':')[0] + '@s.whatsapp.net';
+        if (key.fromMe || sender === botId) return;
+
+        const userId = sender.split('@')[0];
+        const userMessage = body.trim();
+        
+        // Initialize memory for user
+        if (!userChats.has(userId)) {
+            userChats.set(userId, []);
+        }
+        
+        const userConversation = userChats.get(userId);
+        userConversation.push(`User: ${userMessage}`);
+        
+        // Keep only last 10 messages for memory context
+        if (userConversation.length > 10) {
+            userConversation.shift();
+        }
+        
+        const context = userConversation.join('\n');
+        
+        // Fetch response from AI
+        const aiResponse = await getAIResponse(userMessage, context, isGroup);
+        
+        if (aiResponse) {
+            userConversation.push(`AI: ${aiResponse}`);
+            
+            // Send the reply back
+            await conn.sendMessage(from, { 
+                text: aiResponse 
+            }, { quoted: m });
+        }
+        
+    } catch (e) {
+        console.error("Chatbot response error:", e);
+    }
+}
+
+// AI API Logic
+async function getAIResponse(message, context, isGroup) {
+    try {
+        // Attempt API 1: Dark API
+        try {
+            const response = await axios.post('https://darkapi--hfproject.hf.space/chat', {
+                message: message,
+                context: context
+            }, { timeout: 10000 });
+            
+            if (response.data?.response) return response.data.response;
+        } catch (e) {}
+
+        // Attempt API 2: ChatGPT Free
+        try {
+            const response = await axios.get(`https://api.azz.biz.id/api/chatgpt?q=${encodeURIComponent(message)}&key=free`, {
+                timeout: 10000
+            });
+            
+            if (response.data?.respon) return response.data.respon;
+        } catch (e) {}
+        
+        // Fallback Responses
+        const fallbacks = [
+            "I see! Tell me more.",
+            "That's interesting, go on.",
+            "I'm listening!",
+            "I understand.",
+            "Thanks for sharing that with me."
+        ];
+        
+        return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        
+    } catch (error) {
+        console.error("AI API failure:", error);
+        return "I'm having a little trouble thinking right now. Could you try again?";
+    }
+}
