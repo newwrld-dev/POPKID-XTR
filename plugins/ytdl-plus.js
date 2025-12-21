@@ -5,66 +5,62 @@ const fetch = require('node-fetch');
 cmd({
   pattern: "play",
   alias: ["song", "music"],
-  desc: "High-speed audio extraction with multiple formats.",
+  desc: "Advanced tech audio downloader.",
   category: "download",
-  use: ".play <song name>",
+  use: ".play <query>",
   react: "🛰️",
   filename: __filename
 }, async (conn, mek, m, { from, reply, q, sender }) => {
   try {
-    if (!q) return reply("⚙️ *SYSTEM:* Input required. Please provide a song name.");
+    if (!q) return reply("⚙️ *SYSTEM:* Input required.");
 
-    // --- PHASE 1: SYSTEM HANDSHAKE ---
-    let techMsg = `╔═══════════════╗
+    // --- SINGLE BOX: INITIALIZING ---
+    let techMsg = `╔══════════════╗
    ✰  **𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄** ✰
-╟─────────────╢
-│ ✞︎ **ᴘʀᴏᴄᴇss:** sᴄᴀɴɴɪɴɢ 📡
-│ ✞︎ **ᴛᴀʀɢᴇᴛ:** ${q.substring(0, 15)}...
-╟─────────────╢
- [▬▬▬▭▭▭▭▭▭▭] 30%
-╚═══════════════╝`;
+╟──────────────╢
+│ ✞︎ **sᴛᴀᴛᴜs:** sᴄᴀɴɴɪɴɢ... 📡
+│ ✞︎ **ᴛᴀʀɢᴇᴛ:** ${q.substring(0, 15)}
+│ ✞︎ **ʟᴏᴀᴅ:** [▬▬▬▭▭▭▭] 30%
+╚════════════════╝`;
 
     const { key } = await conn.sendMessage(from, { text: techMsg }, { quoted: mek });
 
-    // API Call
     const url = `https://apis.davidcyriltech.my.id/play?query=${encodeURIComponent(q)}`;
     const res = await fetch(url);
     const data = await res.json();
 
     if (!data.status || !data.result?.download_url) {
-      return await conn.sendMessage(from, { text: "❌ **FATAL ERROR:** DATA_NOT_FOUND", edit: key });
+      return await conn.sendMessage(from, { text: "❌ **FATAL ERROR:** DATA NOT FOUND", edit: key });
     }
 
     const song = data.result;
 
-    // --- PHASE 2: INTERACTIVE INTERFACE ---
-    let selectionMsg = `╔═══════════════╗
-   ✰  **𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄** ✰
-╟──────────────────────╢
-│ ✞︎ **ᴛɪᴛʟᴇ:** ${song.title.toUpperCase().substring(0, 20)}
+    // --- SINGLE BOX: FINAL SELECTION ---
+    let selectionMsg = `╔════════════════╗
+   ✰  *𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄* ✰
+╟───────────────╢
+│ ✞︎ **ᴛɪᴛʟᴇ:** ${song.title.substring(0, 20)}
 │ ✞︎ **ᴅᴜʀᴀᴛɪᴏɴ:** ${song.duration || 'N/A'}
-╟─────────────╢
+│ ✞︎ **ʟᴏᴀᴅ:** [▬▬▬▬▬▬▬] 100%
+╟───────────────╢
 │  **sᴇʟᴇᴄᴛ ᴛʀᴀɴsᴍɪssɪᴏɴ:**
 │
 │  1 ➮ ᴀᴜᴅɪᴏ (ᴍᴘ3) 🎵
 │  2 ➮ ᴅᴏᴄᴜᴍᴇɴᴛ (ғɪʟᴇ) 📂
 │  3 ➮ ᴠᴏɪᴄᴇ ɴᴏᴛᴇ (ᴘᴛᴛ) 🎤
-╟─────────────╢
- [▬▬▬▬▬▬▬▬▬▬▬] 100%
-╚═══════════════╝
+╚═════════════════╝
 > *Reply with 1, 2, or 3*`;
 
     await conn.sendMessage(from, { text: selectionMsg, edit: key });
 
-    // --- PHASE 3: INTERACTIVE LISTENER ---
+    // --- INTERACTIVE LISTENER ---
     const listener = async (msg) => {
       // Check if it's a reply to the bot's selection message
       const isReply = msg.message?.extendedTextMessage?.contextInfo?.stanzaId === key.id;
       const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
 
       if (isReply && msg.key.remoteJid === from && ['1', '2', '3'].includes(body)) {
-        // Stop listening for this specific session
-        conn.ev.off('messages.upsert', listener);
+        conn.ev.off('messages.upsert', listener); // Stop listening after valid input
 
         let commonConfig = {
           audio: { url: song.download_url },
@@ -81,7 +77,6 @@ cmd({
           }
         };
 
-        // Execution based on choice
         if (body === '1') {
           await conn.sendMessage(from, { ...commonConfig }, { quoted: mek });
         } else if (body === '2') {
@@ -106,6 +101,6 @@ cmd({
 
   } catch (err) {
     console.error(err);
-    await conn.sendMessage(from, { text: "⚠️ **SYSTEM FATAL ERROR**", edit: key });
+    reply("⚠️ **SYSTEM ERROR.**");
   }
 });
