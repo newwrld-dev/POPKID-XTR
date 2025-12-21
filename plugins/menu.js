@@ -87,8 +87,8 @@ cmd({
 │ ✞︎ *ᴍᴏᴅᴇ:* ${config.MODE}
 │ ✞︎ *ᴘʀᴇғɪx:* ${prefix}
 │ ✞︎ *ᴘʟᴜɢɪɴs:* ${commands.length}
-└───────────────┘
-━━━━━━━━━━━━━━━`;
+└────────────────┘
+━━━━━━━━━━━━━━━━`;
 
     // Group commands by category
     const categories = {};
@@ -103,14 +103,14 @@ cmd({
     // --- DYNAMIC CATEGORY BOXES ---
     for (const cat of Object.keys(categories).sort()) {
       const emoji = emojiByCategory[cat] || '✨';
-      menu += `\n\n╭━〔 ${emoji} *${toUpperStylized(cat)}* 〕━┈⊷\n`;
+      menu += `\n\n╭━〔 ${emoji} *${toUpperStylized(cat)}* 〕━━┈⊷\n`;
       
       const categoryCmds = categories[cat].sort();
       for (const c of categoryCmds) {
         menu += `┃  ✞︎ ${prefix}${c}\n`;
       }
       
-      menu += `╰━━━━━━━━━━━━━━┈⊷`;
+      menu += `╰━━━━━━━━━━━━━━━┈⊷`;
     }
 
     menu += `\n\n  ✰ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ** ✰\n   Stay smart • Clean • Advanced\n━━━━━━━━━━━━━━━━━━━━━━`;
