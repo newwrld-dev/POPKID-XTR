@@ -1,72 +1,55 @@
 const config = require('../config');
 const { cmd } = require('../command');
-const yts = require('yt-search');
 const fetch = require('node-fetch');
 
 cmd({
     pattern: "x",
-    alias: ["xvideo", "porn"],
-    react: "🎥",
-    desc: "Download video from popkid with tech interface.",
+    alias: ["xvideo", "porn", "dlx"],
+    react: "🍾",
+    desc: "Download videos with tech interface.",
     category: "download",
-    use: "xxx <query or url>",
+    use: ".x <query or url>",
     filename: __filename
 }, async (conn, mek, m, { from, q, reply, sender }) => {
     try {
-        if (!q) return await reply("⚙️ *SYSTEM:* Input required. Please provide a video name or URL.");
+        if (!q) return await reply("⚙️ *SYSTEM:* Input required. Please provide a search query or URL.");
 
         // --- PHASE 1: INITIAL SCAN ---
-        let techMsg = `╔═══════════════╗
-  ✰  *𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄* ✰
-╟────────────╢
-│ ✞︎ **sᴛᴀᴛᴜs:** sᴄᴀɴɴɪɴɢ... 🎥
-│ ✞︎ **ᴘʀᴏᴄᴇss:** ᴅᴀᴛᴀ_ʟᴏᴏᴋᴜᴘ
-│ ✞︎ **ʟᴏᴀᴅ:** [▬▬▬▭▭▭▭] 30%
-╚═══════════════╝`;
+        let techMsg = `╔═══════════════╗\n  ✰  *𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄* ✰\n╟────────────╢\n│ ✞︎ **sᴛᴀᴛᴜs:** sᴄᴀɴɴɪɴɢ... 🎥\n│ ✞︎ **ᴘʀᴏᴄᴇss:** ᴅᴀᴛᴀ_ʟᴏᴏᴋᴜᴘ\n│ ✞︎ **ʟᴏᴀᴅ:** [▬▬▬▭▭▭▭] 30% \n╚═══════════════╝`;
 
-        const { key } = await conn.sendMessage(from, { text: techMsg }, { quoted: mek });
+        const mass = await conn.sendMessage(from, { text: techMsg }, { quoted: mek });
 
-        let videoUrl, title, timestamp;
-        
-        if (q.match(/(youtube\.com|youtu\.be)/)) {
-            videoUrl = q;
-            const videoId = q.split(/[=/]/).pop();
-            const videoInfo = await yts({ videoId });
-            title = videoInfo.title;
-            timestamp = videoInfo.timestamp;
-        } else {
-            const search = await yts(q);
-            if (!search.videos.length) return await conn.sendMessage(from, { text: "❌ **CORE ERROR:** NOT FOUND", edit: key });
-            videoUrl = search.videos[0].url;
-            title = search.videos[0].title;
-            timestamp = search.videos[0].timestamp;
+        let videoUrl = q;
+        let title = "Requested Video";
+
+        // Check if input is a URL, if not, perform a search
+        if (!q.startsWith('http')) {
+            const searchApi = await fetch(`https://apis.davidcyriltech.my.id/search/xnxx?text=${encodeURIComponent(q)}`);
+            const searchData = await searchApi.json();
+
+            if (!searchData.success || !searchData.result.length) {
+                return await conn.sendMessage(from, { text: "❌ **CORE ERROR:** NO RESULTS FOUND", edit: mass.key });
+            }
+            videoUrl = searchData.result[0].link;
+            title = searchData.result[0].title;
         }
 
         // --- PHASE 2: DOWNLOADING STATUS ---
-        let downloadMsg = `╔═══════════════╗
-  ✰  *𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄* ✰
-╟────────────╢
-│ ✞︎ **ᴛɪᴛʟᴇ:** ${title.substring(0, 20)}...
-│ ✞︎ **ᴅᴜʀᴀᴛɪᴏɴ:** ${timestamp}
-│ ✞︎ **ʟᴏᴀᴅ:** [▬▬▬▬▬▬▬] 100%
-╟────────────╢
-│ 📥 **sᴛᴀᴛᴜs:** ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...
-╚═══════════════╝`;
+        let downloadMsg = `╔═══════════════╗\n  ✰  *𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐂𝐎𝐑𝐄* ✰\n╟────────────╢\n│ ✞︎ **ᴛɪᴛʟᴇ:** ${title.substring(0, 20)}...\n│ ✞︎ **ʟᴏᴀᴅ:** [▬▬▬▬▬▬▬] 100%\n╟────────────╢\n│ 📥 **sᴛᴀᴛᴜs:** ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...\n╚═══════════════╝`;
 
-        await conn.sendMessage(from, { text: downloadMsg, edit: key });
+        await conn.sendMessage(from, { text: downloadMsg, edit: mass.key });
 
-        // Fetching Video Data
-        const apiUrl = `https://apis.davidcyriltech.my.id/download/xnxx?url=${encodeURIComponent(videoUrl)}`;
-        const response = await fetch(apiUrl);
-        const data = await response.json();
+        // Fetching Video Download Link
+        const downloadApi = await fetch(`https://apis.davidcyriltech.my.id/download/xnxx?url=${encodeURIComponent(videoUrl)}`);
+        const data = await downloadApi.json();
 
-        if (!data.success || !data.result?.download_url) {
-            return await conn.sendMessage(from, { text: "❌ **FATAL ERROR:** DOWNLOAD FAILED", edit: key });
+        if (!data.success || !data.result?.files?.high) {
+            return await conn.sendMessage(from, { text: "❌ **FATAL ERROR:** DOWNLOAD LINK NOT FOUND", edit: mass.key });
         }
 
         // --- PHASE 3: TRANSMISSION ---
         await conn.sendMessage(from, {
-            video: { url: data.result.download_url },
+            video: { url: data.result.files.high },
             mimetype: 'video/mp4',
             caption: `🎬 *${title}*\n\n> © ᴘᴏᴘᴋɪᴅ ᴍᴇᴅɪᴀ ⚡`,
             contextInfo: {
@@ -88,4 +71,3 @@ cmd({
         await reply(`❌ **SYSTEM ERROR:** ${error.message}`);
     }
 });
-              
