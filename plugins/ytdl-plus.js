@@ -8,7 +8,7 @@ cmd({
   desc: "Advanced tech audio downloader.",
   category: "download",
   use: ".play <query>",
-  react: "🛰️",
+  react: "🎵",
   filename: __filename
 }, async (conn, mek, m, { from, reply, q, sender }) => {
   try {
