@@ -1,40 +1,50 @@
-const axios = require('axios');
-const config = require('../config')
-const {cmd , commands} = require('../command')
-const googleTTS = require('google-tts-api')
+const { cmd } = require('../command');
+const fetch = require('node-fetch');
 
 cmd({
     pattern: "trt",
-    alias: ["translate"],
-    desc: "🌍 Translate text between languages",
-    react: "⚡",
-    category: "other",
+    alias: ["translate", "trans"],
+    react: "🌐",
+    desc: "Translate text to any language.",
+    category: "tools",
+    use: ".trt fr Hello, how are you?",
     filename: __filename
-},
-async (conn, mek, m, { from, q, reply }) => {
+}, async (conn, mek, m, { from, q, reply }) => {
     try {
-        const args = q.split(' ');
-        if (args.length < 2) return reply("❗ Please provide a language code and text. Usage: .translate [language code] [text]");
+        if (!q) return await reply("⚙️ *SYSTEM:* Missing input.\n\n*Usage:* .trt <lang_code> <text>\n*Example:* .trt fr Hello");
 
-        const targetLang = args[0];
-        const textToTranslate = args.slice(1).join(' ');
+        // Split the language code (fr, es, ar, etc) from the actual text
+        const args = q.split(" ");
+        const targetLang = args[0]; 
+        const textToTranslate = args.slice(1).join(" ");
 
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(textToTranslate)}&langpair=en|${targetLang}`;
+        if (!textToTranslate) return await reply("❌ *ERROR:* Please provide the text you want to translate.");
 
-        const response = await axios.get(url);
-        const translation = response.data.responseData.translatedText;
+        // Initial loading message
+        const { key } = await conn.sendMessage(from, { text: "🔄 *TRANSLATING:* Processing request..." });
 
-        const translationMessage = `> *TRANSLATION*
+        const apiUrl = `https://apis.davidcyriltech.my.id/tools/translate?text=${encodeURIComponent(textToTranslate)}&to=${targetLang}`;
+        const response = await fetch(apiUrl);
+        const data = await response.json();
 
-> 🔤 *Original*: ${textToTranslate}
+        if (!data.success) {
+            return await conn.sendMessage(from, { text: "❌ *FATAL ERROR:* Translation service unavailable.", edit: key });
+        }
 
-> 🔠 *Translated*: ${translation}
+        // Final Output
+        let resultMsg = `╔═════════════╗
+  ✰  *𝐓𝐑𝐀𝐍𝐒𝐋𝐀𝐓𝐄 𝐂𝐎𝐑𝐄* ✰
+╟────────────╢
+│ 🌐 **FROM:** Auto-Detect
+│ 🎯 **TO:** ${targetLang.toUpperCase()}
+╟────────────╢
+│ 📝 **RESULT:** │ ${data.result}
+╚═════════════╝`;
 
-> 🌐 *Language*: ${targetLang.toUpperCase()}`;
+        await conn.sendMessage(from, { text: resultMsg, edit: key });
 
-        return reply(translationMessage);
-    } catch (e) {
-        console.log(e);
-        return reply("⚠️ An error occurred data while translating the your text. Please try again later🤕");
+    } catch (error) {
+        console.error(error);
+        await reply(`❌ **SYSTEM ERROR:** ${error.message}`);
     }
 });
