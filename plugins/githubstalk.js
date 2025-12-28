@@ -2,8 +2,8 @@ const { cmd } = require('../command');
 const axios = require('axios');
 
 cmd({
-    pattern: "githubstalk",
-    alias: ["github", "ghstalk", "gitstalk"],
+    pattern: "githubstalk2",
+    alias: ["github2", "ghstalk", "gitstalk"],
     desc: "Stalk a GitHub user profile",
     category: "search",
     react: "🔍",
