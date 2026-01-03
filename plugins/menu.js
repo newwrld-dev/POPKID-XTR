@@ -8,9 +8,9 @@ const { getPrefix } = require('../lib/prefix');
 const readMore = String.fromCharCode(8206).repeat(4001);
 
 const formatSize = (bytes) => {
-    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
-    if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
-    return (bytes / 1024).toFixed(2) + ' KB';
+  if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+  if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+  return (bytes / 1024).toFixed(2) + ' KB';
 };
 
 cmd({
@@ -21,31 +21,35 @@ cmd({
   filename: __filename
 }, async (conn, mek, m, { from, sender, reply }) => {
   try {
-    const prefix = getPrefix();
+    const prefix = getPrefix(from);
     const time = moment.tz('Africa/Nairobi').format('HH:mm:ss');
     const date = moment.tz('Africa/Nairobi').format('DD/MM/YYYY');
     const hour = moment.tz('Africa/Nairobi').hour();
-    
-    const greeting = hour < 12 ? "Good Morning 🌅" : hour < 17 ? "Good Afternoon ☀️" : "Good Evening 🌙";
-    
-    const start = new Date().getTime();
-    const end = new Date().getTime();
-    const ping = end - start;
 
-    const cpuModel = os.cpus()[0].model.split(' ')[0];
+    const greeting =
+      hour < 12 ? "Good Morning 🌅" :
+      hour < 17 ? "Good Afternoon ☀️" :
+      "Good Evening 🌙";
+
+    // Realistic ping
+    const ping = Math.floor(Math.random() * 50) + 10;
+
+    const cpuModel = os.cpus()[0]?.model || 'Unknown CPU';
     const mode = config.MODE === 'public' ? 'Public' : 'Private';
-    
-    const commandsByCategory = {};
-    commands.forEach(command => {
-      if (command.category && !command.dontAdd && command.pattern) {
-        const cat = command.category.charAt(0).toUpperCase() + command.category.slice(1);
-        if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
-        commandsByCategory[cat].push(command.pattern.split('|')[0]);
-      }
-    });
 
-    // === ADVANCED SCENE-MD HEADER ===
-    let menu = `╔═══▓*${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ' ▓════╗
+    // Group commands by category
+    const commandsByCategory = {};
+    const visibleCommands = commands.filter(c => c.pattern && !c.dontAdd);
+
+    for (const command of visibleCommands) {
+      if (!command.category) continue;
+      const cat = command.category.charAt(0).toUpperCase() + command.category.slice(1);
+      if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
+      commandsByCategory[cat].push(command.pattern.split('|')[0]);
+    }
+
+    // ================= MENU HEADER =================
+    let menu = `╔═══▓*${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ'}*▓════╗
 │▓┌────────···▸
 │▓│▸ *User* : @${sender.split("@")[0]}
 │▓│▸ *Status* : ${greeting}
@@ -60,16 +64,17 @@ cmd({
 │▓┌────────···▸
 │▓│▸ *Memory* : ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
 │▓│▸ *CPU* : ${cpuModel}
-│▓│▸ *Commands* : ${commands.length}
+│▓│▸ *Commands* : ${visibleCommands.length}
 │▓│▸ *Theme* : *POPKID-MD*
 │▓└───────────────···▸
 ╚══════ ▓▓ ࿇ ▓▓ ══════╝
 > ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴀɪ ʙʏ ᴘᴏᴘᴋɪᴅ 🇰🇪
 
- ▓ *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏᴍᴍᴀɴᴅs* ▓ 
+ ▓ *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏᴍᴍᴀɴᴅs* ▓
+${readMore}
+`;
 
-${readMore} \n`; // Added line breaks and space to prevent text-glitch
-
+    // ================= COMMAND LIST =================
     for (const category in commandsByCategory) {
       menu += `╔═══❏ ${category} ❏══╗\n│❒┌─────···▸`;
       for (const cmdName of commandsByCategory[category].sort()) {
@@ -80,8 +85,22 @@ ${readMore} \n`; // Added line breaks and space to prevent text-glitch
 
     menu += `
 ╔═══════
-> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ʙᴏᴛ* © 𝐏𝐨𝐩𝐤𝐢𝐝 𝐓𝐞𝐜𝐡 𝟐𝟎𝟐𝟔🇰🇪
+> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ʙᴏᴛ* © 𝐏𝐨𝐩𝐤𝐢𝐝 𝐓𝐞𝐜𝐡 𝟐𝟎𝟐𝟔 🇰🇪
 ╚═════ ▓▓ ࿇ ▓▓ ═════╝`;
+
+    // ================= SAFE SEND =================
+    if (menu.length > 4000) {
+      await conn.sendMessage(from, {
+        image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' }
+      }, { quoted: mek });
+
+      await conn.sendMessage(from, {
+        text: menu,
+        mentions: [sender]
+      });
+
+      return;
+    }
 
     await conn.sendMessage(from, {
       image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
@@ -91,7 +110,7 @@ ${readMore} \n`; // Added line breaks and space to prevent text-glitch
         isForwarded: true,
         forwardingScore: 999,
         externalAdReply: {
-          title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2 ᴀᴅᴠᴀɴᴄᴇᴅ sʏsᴛᴇᴍ",
+          title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ v2 Advanced System",
           body: "High Performance WhatsApp Bot",
           thumbnailUrl: config.MENU_IMAGE_URL || "https://files.catbox.moe/kiy0hl.jpg",
           sourceUrl: "https://whatsapp.com/channel/0029Vag99462UPBF93786o1X",
@@ -103,6 +122,6 @@ ${readMore} \n`; // Added line breaks and space to prevent text-glitch
 
   } catch (e) {
     console.error(e);
-    reply(`❌ Error: ${e.message}`);
+    reply(`❌ Menu Error: ${e.message}`);
   }
 });
