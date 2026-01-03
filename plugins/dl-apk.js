@@ -16,36 +16,52 @@ async (conn, mek, m, { from, q, reply }) => {
         // ⏳ React - processing
         await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
 
-        // Search the app on bk9
-        const search = await axios.get(`https://bk9.fun/search/apk?q=${encodeURIComponent(q)}`);
-        if (!search.data.BK9 || search.data.BK9.length === 0) {
+        // Fetch APK details from David Cyril API
+        // Note: Replace 'YOUR_API_KEY' if the API requires one, otherwise leave it empty
+        const apiKey = "YOUR_API_KEY"; 
+        const apiUrl = `https://apis.davidcyriltech.my.id/download/apk?text=${encodeURIComponent(q)}&apikey=${apiKey}`;
+        
+        const response = await axios.get(apiUrl);
+        const res = response.data;
+
+        // Check if the API returned a successful result
+        if (!res.status || !res.result) {
             await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
-            return reply("❌ *No app found with that name, please try again.*");
+            return reply("❌ *Could not find the app. Please check the name and try again.*");
         }
 
-        // Fetch APK details
-        const id = search.data.BK9[0].id;
-        const details = await axios.get(`https://bk9.fun/download/apk?id=${id}`);
-        const app = details.data.BK9;
+        const app = res.result;
 
-        if (!app || !app.dllink) {
-            await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
-            return reply("❌ *Unable to find download link for this app.*");
-        }
+        // Send app info first (Optional, but looks better)
+        const infoMsg = `
+📦 *APP DOWNLOADER*
 
-        // Send APK file
+📝 *Name:* ${app.name}
+🆔 *Package:* ${app.id}
+📅 *Last Updated:* ${app.lastup}
+⚖️ *Size:* ${app.size}
+
+_Downloading file... Please wait_ 📥
+        `.trim();
+
+        await conn.sendMessage(from, { 
+            image: { url: app.icon }, 
+            caption: infoMsg 
+        }, { quoted: mek });
+
+        // Send the actual APK file
         await conn.sendMessage(from, {
             document: { url: app.dllink },
             mimetype: "application/vnd.android.package-archive",
             fileName: `${app.name}.apk`,
-            caption: `✅ *APK successfully downloaded*\nᴘᴏᴘᴋɪᴅ ᴀᴘᴘs 🤍`
+            caption: `✅ *${app.name} Downloaded*\nᴘᴏᴘᴋɪᴅ ᴀᴘᴘs 🤍`
         }, { quoted: mek });
 
         // ✅ React - success
         await conn.sendMessage(from, { react: { text: '✅', key: m.key } });
 
     } catch (error) {
-        console.error(error);
+        console.error("APK Download Error:", error);
         await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
         reply("❌ *An error occurred while fetching the APK.*");
     }
