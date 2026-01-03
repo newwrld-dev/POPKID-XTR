@@ -14,44 +14,52 @@ cmd({
   try {
     const prefix = getPrefix();
     const time = moment.tz('Africa/Nairobi').format('HH:mm:ss');
-    const greeting = moment.tz('Africa/Nairobi').hour() < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" : moment.tz('Africa/Nairobi').hour() < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" : "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
+    const date = moment.tz('Africa/Nairobi').format('DD/MM/YY');
+    const hour = moment.tz('Africa/Nairobi').hour();
+    const greeting = hour < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" : hour < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" : "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
+    
+    const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
+    
+    let menuText = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
+┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
+┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
+┃⚡ *ᴍᴏᴅᴇ*: ${mode}
+┃📅 *ᴅᴀᴛᴇ*: ${date}
+┃🕒 *ᴛɪᴍᴇ*: ${time}
+┃⚙️ *ᴄᴍᴅs*: ${commands.length}
+┗━━━━━━━━━━━━━━━┈⊷
 
-    let menuText = `👋 Hello @${sender.split("@")[0]}, ${greeting}
+Welcome to *ᴘᴏᴘᴋɪᴅ-ᴍᴅ*. Select a button below to explore.`;
 
-Welcome to *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}*. 
-
-*🕒 Time:* ${time}
-*🚀 Ping:* ${Date.now() - m.messageTimestamp * 1000}ms
-
-Please click the button below to view all available command categories.`;
-
-    // Define the sections for the List
-    const sections = [
-        {
-            title: "MAIN MENU",
-            rows: [
-                { title: "All Commands", rowId: `${prefix}allmenu`, description: "View every command available" },
-                { title: "Bot Status", rowId: `${prefix}ping`, description: "Check speed and uptime" }
-            ]
-        },
-        {
-            title: "SUPPORT",
-            rows: [
-                { title: "Owner Info", rowId: `${prefix}owner`, description: "Contact the developer" },
-                { title: "Script Info", rowId: `${prefix}sc`, description: "Get bot source code" }
-            ]
-        }
+    // Gifted-MD Button Structure
+    const buttons = [
+        { buttonId: `${prefix}ping`, buttonText: { displayText: '🚀 SPEED' }, type: 1 },
+        { buttonId: `${prefix}list`, buttonText: { displayText: '📜 ALL COMMANDS' }, type: 1 },
+        { buttonId: `${prefix}owner`, buttonText: { displayText: '👤 OWNER' }, type: 1 }
     ];
 
-    const listMessage = {
-        text: menuText,
+    const buttonMessage = {
+        image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
+        caption: menuText,
         footer: 'ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ',
-        title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2",
-        buttonText: "ᴄʟɪᴄᴋ ʜᴇʀᴇ ꜰᴏʀ ᴍᴇɴᴜ ☰",
-        sections
+        buttons: buttons,
+        headerType: 4,
+        contextInfo: {
+            mentionedJid: [sender],
+            externalAdReply: {
+                title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2",
+                body: "ᴀᴅᴠᴀɴᴄᴇᴅ ᴡʜᴀᴛsᴀᴘᴘ ʙᴏᴛ",
+                mediaType: 1,
+                sourceUrl: "https://whatsapp.com/channel/0029Vag99462UPBF93786o1X",
+                thumbnailUrl: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg',
+                renderLargerThumbnail: true,
+                showAdAttribution: true
+            }
+        }
     };
 
-    return await conn.sendMessage(from, listMessage, { quoted: mek });
+    // Using the Gifted-MD connection to send
+    return await conn.sendMessage(from, buttonMessage, { quoted: mek });
 
   } catch (e) {
     console.error(e);
