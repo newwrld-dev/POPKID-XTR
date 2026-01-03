@@ -4,9 +4,6 @@ const { cmd, commands } = require('../command');
 const os = require('os');
 const { getPrefix } = require('../lib/prefix');
 
-// WhatsApp "read more" fix
-const readMore = String.fromCharCode(8206).repeat(4001);
-
 const formatSize = (bytes) => {
     if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
     if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
@@ -45,7 +42,7 @@ cmd({
     });
 
     // === ADVANCED SCENE-MD HEADER ===
-    let menu = `╔═══▓│ *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* │▓════╗
+    let menu = `▓│ *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* │▓
 │▓┌────────···▸
 │▓│▸ *User* : @${sender.split("@")[0]}
 │▓│▸ *Status* : ${greeting}
@@ -61,14 +58,12 @@ cmd({
 │▓│▸ *Memory* : ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
 │▓│▸ *CPU* : ${cpuModel}
 │▓│▸ *Commands* : ${commands.length}
-│▓│▸ *Theme* : *SCENE-MD ADVANCED*
+│▓│▸ *Theme* : *POPKID-MD*
 │▓└───────────────···▸
 ╚══════ ▓▓ ࿇ ▓▓ ══════╝
 > ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴀɪ ʙʏ ᴘᴏᴘᴋɪᴅ 🇰🇪
 
- ▓ *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏᴍᴍᴀɴᴅs* ▓ 
-
-${readMore} \n`; // Added line breaks and space to prevent text-glitch
+ ▓ *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏᴍᴍᴀɴᴅs* ▓ \n\n`; 
 
     for (const category in commandsByCategory) {
       menu += `╔═══❏ ${category} ❏══╗\n│❒┌─────···▸`;
