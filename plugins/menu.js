@@ -10,8 +10,8 @@ const formatSize = (bytes) => {
     return (bytes / 1024).toFixed(0) + 'KB';
 };
 
-// Character to trigger "Read More"
-const readMore = String.fromCharCode(8206).repeat(4001);
+// Invisible "Read More" character (enough to trigger WhatsApp collapse)
+const readMore = String.fromCharCode(8206).repeat(400);
 
 cmd({
   pattern: 'menu',
@@ -26,13 +26,14 @@ cmd({
     const date = moment.tz('Africa/Nairobi').format('DD/MM/YY');
     const hour = moment.tz('Africa/Nairobi').hour();
     const greeting = hour < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" : hour < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" : "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
-    
+
     const start = Date.now();
     const ping = Date.now() - start;
 
-    const cpuModel = os.cpus()[0].model.split(' ')[0];
+    const cpuModel = os.cpus()[0].model; // full CPU model
     const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
-    
+
+    // Organize commands by category
     const commandsByCategory = {};
     commands.forEach(command => {
       if (command.category && !command.dontAdd && command.pattern) {
@@ -42,6 +43,7 @@ cmd({
       }
     });
 
+    // Menu header
     let menu = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
 ┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
 ┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
@@ -52,8 +54,10 @@ cmd({
 ┃📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
 ┃💻 *ᴄᴘᴜ*: ${cpuModel}
 ┃⚙️ *ᴄᴍᴅs*: ${commands.length}
-┗━━━━━━━━━━━━━━━┈⊷\n\n*ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵${readMore}`; // Read more starts here
+┗━━━━━━━━━━━━━━━┈⊷
+${readMore}\n\n*ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵`;
 
+    // Add commands by category
     for (const category in commandsByCategory) {
       menu += `\n\n┏━━〔 *${category}* 〕━━┈⊷\n`;
       const sortedCmds = commandsByCategory[category].sort();
@@ -63,8 +67,10 @@ cmd({
       menu += `┗━━━━━━━━━━━━━━━┈⊷`;
     }
 
+    // Footer
     menu += `\n\n> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ* © ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ 𝟸𝟶𝟸𝟼🇰🇪`;
 
+    // Send menu as image with rich preview
     await conn.sendMessage(from, {
       image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
       caption: menu,
