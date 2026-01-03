@@ -26,9 +26,7 @@ cmd({
     
     const start = Date.now();
     const ping = Date.now() - start;
-
     const cpuModel = os.cpus()[0].model.split(' ')[0];
-    const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
     
     const commandsByCategory = {};
     commands.forEach(command => {
@@ -39,45 +37,46 @@ cmd({
       }
     });
 
-    // === REFINED DESIGN ===
-    // Removed unnecessary spacing and ensures clean line breaks
-    let menu = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
+    const categoryKeys = Object.keys(commandsByCategory).sort();
+
+    // === CAROUSEL SECTIONS (Left-to-Right Scrolling) ===
+    const cards = categoryKeys.map((category) => {
+      const sortedCmds = commandsByCategory[category].sort();
+      let cmdList = sortedCmds.map(cmdName => `┃ ✦ ${prefix}${cmdName}`).join('\n');
+
+      return {
+        body: { text: `┏━━〔 *${category}* 〕━━┈⊷\n${cmdList}\n┗━━━━━━━━━━━━━━━┈⊷` },
+        footer: { text: `ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ` },
+        header: {
+          hasMediaAttachment: true,
+          imageMessage: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' }
+        },
+        nativeFlowMessage: { buttons: [] } // No buttons as requested
+      };
+    });
+
+    // Main Header Message
+    const headerMessage = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
 ┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
 ┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
-┃⚡ *ᴍᴏᴅᴇ*: ${mode}
 ┃🚀 *ᴘɪɴɢ*: ${ping}ᴍs
 ┃📅 *ᴅᴀᴛᴇ*: ${date}
 ┃🕒 *ᴛɪᴍᴇ*: ${time}
-┃📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
-┃💻 *ᴄᴘᴜ*: ${cpuModel}
+┃📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}
 ┃⚙️ *ᴄᴍᴅs*: ${commands.length}
-┗━━━━━━━━━━━━━━━┈⊷\n\n*ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵`;
+┗━━━━━━━━━━━━━━━┈⊷
 
-    for (const category in commandsByCategory) {
-      menu += `\n\n┏━━〔 *${category}* 〕━━┈⊷\n`;
-      const sortedCmds = commandsByCategory[category].sort();
-      for (const cmdName of sortedCmds) {
-        menu += `┃ ✦ ${prefix}${cmdName}\n`;
-      }
-      menu += `┗━━━━━━━━━━━━━━━┈⊷`;
-    }
+↔️ *sᴡɪᴘᴇ ʟᴇғᴛ ᴛᴏ ᴠɪᴇᴡ ᴄᴀᴛᴇɢᴏʀɪᴇs*`;
 
-    menu += `\n\n> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ* © ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ 𝟸𝟶𝟸𝟼🇰🇪`;
-
-    await conn.sendMessage(from, {
-      image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
-      caption: menu,
-      contextInfo: {
-        mentionedJid: [sender],
-        isForwarded: false, // Set to false to reduce message "weight" in some UI versions
-        forwardingScore: 0,
-        externalAdReply: {
-          title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2 ᴀᴅᴠᴀɴᴄᴇᴅ",
-          body: "ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ",
-          thumbnailUrl: config.MENU_IMAGE_URL || "https://files.catbox.moe/kiy0hl.jpg",
-          sourceUrl: "https://whatsapp.com/channel/0029Vag99462UPBF93786o1X",
-          mediaType: 1,
-          renderLargerThumbnail: true
+    return await conn.sendMessage(from, {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            body: { text: headerMessage },
+            carouselMessage: {
+              cards: cards
+            }
+          }
         }
       }
     }, { quoted: mek });
