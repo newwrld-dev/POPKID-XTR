@@ -4,9 +4,8 @@ const { cmd, commands } = require('../command');
 const os = require('os');
 const { getPrefix } = require('../lib/prefix');
 
-// WhatsApp "read more"
-const invisibleChar = String.fromCharCode(8206);
-const readMore = invisibleChar.repeat(4001);
+// WhatsApp "read more" fix
+const readMore = String.fromCharCode(8206).repeat(4001);
 
 const formatSize = (bytes) => {
     if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
@@ -27,17 +26,13 @@ cmd({
     const date = moment.tz('Africa/Nairobi').format('DD/MM/YYYY');
     const hour = moment.tz('Africa/Nairobi').hour();
     
-    // Advanced: Dynamic Greeting
     const greeting = hour < 12 ? "Good Morning 🌅" : hour < 17 ? "Good Afternoon ☀️" : "Good Evening 🌙";
     
-    // Advanced: Speed Test (Ping)
     const start = new Date().getTime();
     const end = new Date().getTime();
     const ping = end - start;
 
-    // Advanced: CPU Info
-    const cpuModel = os.cpus()[0].model.split(' ')[0]; // Gets the basic CPU name
-
+    const cpuModel = os.cpus()[0].model.split(' ')[0];
     const mode = config.MODE === 'public' ? 'Public' : 'Private';
     
     const commandsByCategory = {};
@@ -50,7 +45,7 @@ cmd({
     });
 
     // === ADVANCED SCENE-MD HEADER ===
-    let menu = `╔═══★★│ *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* │★★════╗
+    let menu = `╔═══▓*${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ' ▓════╗
 │▓┌────────···▸
 │▓│▸ *User* : @${sender.split("@")[0]}
 │▓│▸ *Status* : ${greeting}
@@ -66,14 +61,14 @@ cmd({
 │▓│▸ *Memory* : ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
 │▓│▸ *CPU* : ${cpuModel}
 │▓│▸ *Commands* : ${commands.length}
-│▓│▸ *Theme* : *SCENE-MD ADVANCED*
+│▓│▸ *Theme* : *POPKID-MD*
 │▓└───────────────···▸
 ╚══════ ▓▓ ࿇ ▓▓ ══════╝
 > ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴀɪ ʙʏ ᴘᴏᴘᴋɪᴅ 🇰🇪
-${readMore}
-`;
 
-    menu += `\n╔══ ▓ *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏᴍᴍᴀɴᴅs* ▓ ══╗\n\n`;
+ ▓ *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏᴍᴍᴀɴᴅs* ▓ 
+
+${readMore} \n`; // Added line breaks and space to prevent text-glitch
 
     for (const category in commandsByCategory) {
       menu += `╔═══❏ ${category} ❏══╗\n│❒┌─────···▸`;
