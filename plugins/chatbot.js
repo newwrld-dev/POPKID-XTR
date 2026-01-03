@@ -3,17 +3,13 @@ const config = require("../config");
 const fetch = require("node-fetch");
 
 // === AI Chatbot Event Handler ===
-// This listener checks every message to see if it should reply
 cmd({ on: "body" }, async (client, message, chat, { from, body, isGroup, isCmd }) => {
   try {
-    // 1. SMART FILTERS: Only reply if AI is ON, it's NOT a command, NOT a group, and NOT from the bot itself
     if (config.AUTO_AI === "true" && !isCmd && !isGroup && !message.key.fromMe && body) {
       
-      // 2. Realistic "typing..." presence
       await client.sendPresenceUpdate('composing', from);
 
-      // 3. Fetch response from David Cyril API
-      const apiKey = ""; // Add your apikey here if required
+      const apiKey = ""; 
       const apiUrl = `https://apis.davidcyriltech.my.id/ai/chatbot?query=${encodeURIComponent(body)}&apikey=${apiKey}`;
       
       const response = await fetch(apiUrl);
@@ -22,18 +18,9 @@ cmd({ on: "body" }, async (client, message, chat, { from, body, isGroup, isCmd }
       if (data.status === 200 || data.success) {
         const aiReply = data.result;
 
-        // 4. Send the smart reply with your brand styling
+        // Removed contextInfo to stop the "forwarded" and "channel" styling
         await client.sendMessage(from, {
-          text: `${aiReply}\n\n> © ᴘᴏᴘᴋɪᴅ ᴍᴅ ᴀɪ 🤖`,
-          contextInfo: {
-            forwardingScore: 999,
-            isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-              newsletterJid: '120363289379419860@newsletter',
-              newsletterName: '𝐩𝐨𝐩𝐤𝐢𝐝 𝐱𝐦𝐝 𝐀𝐈',
-              serverMessageId: 143
-            }
-          }
+          text: `${aiReply}\n\n> © ᴘᴏᴘᴋɪᴅ ᴍᴅ ᴀɪ 🤖`
         }, { quoted: message });
       }
     }
@@ -43,7 +30,6 @@ cmd({ on: "body" }, async (client, message, chat, { from, body, isGroup, isCmd }
 });
 
 // === Chatbot Toggle Command ===
-// Use this to turn the AI on or off
 cmd({
   pattern: "chatbot",
   alias: ["autoai", "aichat"],
@@ -96,7 +82,7 @@ async (client, message, m, { isOwner, from, sender, args }) => {
         break;
     }
 
-    // Send combined image + newsletter style message
+    // Removed the forwarding/newsletter context here as well for a clean look
     await client.sendMessage(from, {
       image: { url: "https://files.catbox.moe/kiy0hl.jpg" },
       caption: `
@@ -106,18 +92,10 @@ ${additionalInfo}
 _𝐩𝐨𝐩𝐤𝐢𝐝 𝐜𝐡𝐚𝐭𝐛𝐨𝐭 🌟_
       `,
       contextInfo: {
-        mentionedJid: [sender],
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: '120363289379419860@newsletter',
-          newsletterName: '𝐩𝐨𝐩𝐤𝐢𝐝 𝐱𝐦𝐝 𝐀𝐈',
-          serverMessageId: 143
-        }
+        mentionedJid: [sender]
       }
     }, { quoted: message });
 
-    // React to original command for visual feedback
     await client.sendMessage(from, {
       react: { text: reaction, key: message.key }
     });
