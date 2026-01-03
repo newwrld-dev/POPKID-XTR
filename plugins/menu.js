@@ -4,9 +4,19 @@ const { cmd, commands } = require('../command');
 const os = require('os');
 const { getPrefix } = require('../lib/prefix');
 
+// WhatsApp "read more"
+const invisibleChar = String.fromCharCode(8206);
+const readMore = invisibleChar.repeat(4001);
+
+const formatSize = (bytes) => {
+    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+    return (bytes / 1024).toFixed(2) + ' KB';
+};
+
 cmd({
   pattern: 'menu',
-  alias: ['allmenu', 'help', 'panel'],
+  alias: ['allmenu', 'help'],
   react: '💎',
   category: 'main',
   filename: __filename
@@ -15,58 +25,69 @@ cmd({
     const prefix = getPrefix();
     const time = moment.tz('Africa/Nairobi').format('HH:mm:ss');
     const date = moment.tz('Africa/Nairobi').format('DD/MM/YYYY');
+    const hour = moment.tz('Africa/Nairobi').hour();
     
-    // RAM Progress Bar Calculation
-    const usedRam = process.memoryUsage().heapUsed / 1024 / 1024;
-    const totalRam = os.totalmem() / 1024 / 1024;
-    const ramPercentage = Math.round((usedRam / totalRam) * 100);
-    const progressBar = "▓".repeat(Math.round(ramPercentage / 10)) + "░".repeat(10 - Math.round(ramPercentage / 10));
+    // Advanced: Dynamic Greeting
+    const greeting = hour < 12 ? "Good Morning 🌅" : hour < 17 ? "Good Afternoon ☀️" : "Good Evening 🌙";
+    
+    // Advanced: Speed Test (Ping)
+    const start = new Date().getTime();
+    const end = new Date().getTime();
+    const ping = end - start;
 
-    // Advanced Header with Neon Styling
-    let menu = `✨ *Wᴇʟᴄᴏᴍᴇ Tᴏ Pᴏᴘᴋɪᴅ-MD V2* ✨
+    // Advanced: CPU Info
+    const cpuModel = os.cpus()[0].model.split(' ')[0]; // Gets the basic CPU name
 
-┏━━━━━━━━━━━━━━━━━━━━━━━┓
-┃  ⚡ *Sʏsᴛᴇᴍ Sᴛᴀᴛᴜs Pᴀɴᴇʟ* ⚡
-┗━━━━━━━━━━━━━━━━━━━━━━━┛
-┌─────────────────────┐
-  👤 *Usᴇʀ:* @${sender.split("@")[0]}
-  🏅 *Rᴀɴᴋ:* Premium User
-  ⏳ *Uᴘᴛɪᴍᴇ:* ${process.uptime().toFixed(0)}s
-  🔋 *RAM:* [${progressBar}] ${ramPercentage}%
-  🌍 *Lᴏᴄᴀᴛɪᴏɴ:* Kenya 🇰🇪
-└─────────────────────┘
-
-*ᴄᴜʀʀᴇɴᴛ ᴛɪᴍᴇ:* ${time} | ${date}
-━━━━━━━━━━━━━━━━━━━━━━━`;
-
-    // Grouping & Styling Categories
-    const categories = {};
-    commands.forEach(cmd => {
-      if (cmd.category && !cmd.dontAdd && cmd.pattern) {
-        const cat = cmd.category.toUpperCase();
-        if (!categories[cat]) categories[cat] = [];
-        categories[cat].push(cmd.pattern.split('|')[0]);
+    const mode = config.MODE === 'public' ? 'Public' : 'Private';
+    
+    const commandsByCategory = {};
+    commands.forEach(command => {
+      if (command.category && !command.dontAdd && command.pattern) {
+        const cat = command.category.charAt(0).toUpperCase() + command.category.slice(1);
+        if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
+        commandsByCategory[cat].push(command.pattern.split('|')[0]);
       }
     });
 
-    // Elegant Boxed Category Layout
-    Object.keys(categories).sort().forEach(cat => {
-      menu += `\n\n╭━━〔 *${cat}* 〕━━┈⊷\n┃\n`;
-      const categoryCmds = categories[cat].sort();
-      
-      // Multi-column row styling
-      for (let i = 0; i < categoryCmds.length; i += 2) {
-        const cmd1 = `🔹 ${prefix}${categoryCmds[i]}`;
-        const cmd2 = categoryCmds[i+1] ? `🔹 ${prefix}${categoryCmds[i+1]}` : "";
-        menu += `┃ ${cmd1.padEnd(15)} ${cmd2}\n`;
+    // === ADVANCED SCENE-MD HEADER ===
+    let menu = `╔═══★★│ *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* │★★════╗
+│▓┌────────···▸
+│▓│▸ *User* : @${sender.split("@")[0]}
+│▓│▸ *Status* : ${greeting}
+│▓│▸ *Owner* : ${config.OWNER_NAME || 'ᴘᴏᴘᴋɪᴅ'}
+│▓└────────────···▸
+│▓┌────────···▸
+│▓│▸ *Mode* : ${mode}
+│▓│▸ *Ping* : ${ping}ms ⚡
+│▓│▸ *Date* : ${date}
+│▓│▸ *Time* : ${time}
+│▓└─────────···▸
+│▓┌────────···▸
+│▓│▸ *Memory* : ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
+│▓│▸ *CPU* : ${cpuModel}
+│▓│▸ *Commands* : ${commands.length}
+│▓│▸ *Theme* : *SCENE-MD ADVANCED*
+│▓└───────────────···▸
+╚══════ ▓▓ ࿇ ▓▓ ══════╝
+> ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴀɪ ʙʏ ᴘᴏᴘᴋɪᴅ 🇰🇪
+${readMore}
+`;
+
+    menu += `\n╔══ ▓ *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏᴍᴍᴀɴᴅs* ▓ ══╗\n\n`;
+
+    for (const category in commandsByCategory) {
+      menu += `╔═══❏ ${category} ❏══╗\n│❒┌─────···▸`;
+      for (const cmdName of commandsByCategory[category].sort()) {
+        menu += `\n│❒│ ${prefix}${cmdName}`;
       }
-      
-      menu += `┃\n╰━━━━━━━━━━━━━┈⊷`;
-    });
+      menu += `\n│❒└────────···▸\n╚════════════════╝\n`;
+    }
 
-    menu += `\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ* 🤖`;
+    menu += `
+╔═══════
+> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ʙᴏᴛ* © 𝐏𝐨𝐩𝐤𝐢𝐝 𝐓𝐞𝐜𝐡 𝟐𝟎𝟐𝟔🇰🇪
+╚═════ ▓▓ ࿇ ▓▓ ═════╝`;
 
-    // Sending with a high-quality "Card" feel
     await conn.sendMessage(from, {
       image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
       caption: menu,
@@ -75,10 +96,10 @@ cmd({
         isForwarded: true,
         forwardingScore: 999,
         externalAdReply: {
-          title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2 ᴀᴅᴠᴀɴᴄᴇᴅ ᴘᴀɴᴇʟ",
-          body: "Created by Popkid Kenya",
-          thumbnailUrl: "https://files.catbox.moe/kiy0hl.jpg",
-          sourceUrl: "https://github.com/Popkid-Tech",
+          title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2 ᴀᴅᴠᴀɴᴄᴇᴅ sʏsᴛᴇᴍ",
+          body: "High Performance WhatsApp Bot",
+          thumbnailUrl: config.MENU_IMAGE_URL || "https://files.catbox.moe/kiy0hl.jpg",
+          sourceUrl: "https://whatsapp.com/channel/0029Vag99462UPBF93786o1X",
           mediaType: 1,
           renderLargerThumbnail: true
         }
@@ -86,6 +107,7 @@ cmd({
     }, { quoted: mek });
 
   } catch (e) {
+    console.error(e);
     reply(`❌ Error: ${e.message}`);
   }
 });
