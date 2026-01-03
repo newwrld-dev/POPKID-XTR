@@ -1,151 +1,91 @@
 const config = require('../config');
 const moment = require('moment-timezone');
 const { cmd, commands } = require('../command');
-const { runtime } = require('../lib/functions');
 const os = require('os');
 const { getPrefix } = require('../lib/prefix');
-const fs = require('fs');
-const path = require('path');
-
-// Quoted Contact Message (Verified Style)
-const quotedContact = {
-  key: {
-    fromMe: false,
-    participant: `0@s.whatsapp.net`,
-    remoteJid: "status@broadcast"
-  },
-  message: {
-    contactMessage: {
-      displayName: "ᴘᴏᴘᴋɪᴅ VERIFIED ✅",
-      vcard: `BEGIN:VCARD
-VERSION:3.0
-FN:ᴘᴏᴘᴋɪᴅ VERIFIED ✅
-ORG:POP KID BOT;
-TEL;type=CELL;type=VOICE;waid=${config.OWNER_NUMBER || '0000000000'}:+${config.OWNER_NUMBER || '0000000000'}
-END:VCARD`
-    }
-  }
-};
-
-// Stylize uppercase letters
-function toUpperStylized(str) {
-  const stylized = {
-    A: 'ᴀ', B: 'ʙ', C: 'ᴄ', D: 'ᴅ', E: 'ᴇ', F: 'ғ', G: 'ɢ', H: 'ʜ',
-    I: 'ɪ', J: 'ᴊ', K: 'ᴋ', L: 'ʟ', M: 'ᴍ', N: 'ɴ', O: 'ᴏ', P: 'ᴘ',
-    Q: 'ǫ', R: 'ʀ', S: 's', T: 'ᴛ', U: 'ᴜ', V: 'ᴠ', W: 'ᴡ', X: 'x',
-    Y: 'ʏ', Z: 'ᴢ'
-  };
-  return str.split('').map(c => stylized[c.toUpperCase()] || c).join('');
-}
-
-// Normalize category names
-const normalize = (str) => str.toLowerCase().replace(/\s+menu$/, '').trim();
-
-// Emoji by category
-const emojiByCategory = {
-  ai: '🤖',
-  anime: '🍥',
-  audio: '🎧',
-  download: '📥',
-  fun: '🎮',
-  group: '👥',
-  info: '🧠',
-  main: '🏠',
-  music: '🎵',
-  owner: '👑',
-  search: '🔎',
-  settings: '⚙️',
-  sticker: '🌟',
-  tools: '🛠️',
-};
 
 cmd({
   pattern: 'menu',
-  alias: ['allmenu'],
-  desc: 'Show all bot commands',
-  category: 'menu',
-  react: '⚡',
+  alias: ['allmenu', 'help', 'panel'],
+  react: '💎',
+  category: 'main',
   filename: __filename
 }, async (conn, mek, m, { from, sender, reply }) => {
   try {
     const prefix = getPrefix();
-    const uptime = () => {
-      let sec = process.uptime();
-      let h = Math.floor(sec / 3600);
-      let m = Math.floor((sec % 3600) / 60);
-      let s = Math.floor(sec % 60);
-      return `${h}h ${m}m ${s}s`;
-    };
+    const time = moment.tz('Africa/Nairobi').format('HH:mm:ss');
+    const date = moment.tz('Africa/Nairobi').format('DD/MM/YYYY');
+    
+    // RAM Progress Bar Calculation
+    const usedRam = process.memoryUsage().heapUsed / 1024 / 1024;
+    const totalRam = os.totalmem() / 1024 / 1024;
+    const ramPercentage = Math.round((usedRam / totalRam) * 100);
+    const progressBar = "▓".repeat(Math.round(ramPercentage / 10)) + "░".repeat(10 - Math.round(ramPercentage / 10));
 
-    // --- STYLIZED MENU HEADER ---
-    let menu = `╔══════════════╗
-   ✰  *𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐕𝟐* ✰
-╚══════════════╝
-┌───────────────┐
-│ ✞︎ *ᴜsᴇʀ:* @${sender.split("@")[0]}
-│ ✞︎ *ᴜᴘᴛɪᴍᴇ:* ${uptime()}
-│ ✞︎ *ᴍᴏᴅᴇ:* ${config.MODE}
-│ ✞︎ *ᴘʀᴇғɪx:* ${prefix}
-│ ✞︎ *ᴘʟᴜɢɪɴs:* ${commands.length}
- └───────────────┘
-━━━━━━━━━━━━━━━━`;
+    // Advanced Header with Neon Styling
+    let menu = `✨ *Wᴇʟᴄᴏᴍᴇ Tᴏ Pᴏᴘᴋɪᴅ-MD V2* ✨
 
-    // Group commands by category
+┏━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  ⚡ *Sʏsᴛᴇᴍ Sᴛᴀᴛᴜs Pᴀɴᴇʟ* ⚡
+┗━━━━━━━━━━━━━━━━━━━━━━━┛
+┌─────────────────────┐
+  👤 *Usᴇʀ:* @${sender.split("@")[0]}
+  🏅 *Rᴀɴᴋ:* Premium User
+  ⏳ *Uᴘᴛɪᴍᴇ:* ${process.uptime().toFixed(0)}s
+  🔋 *RAM:* [${progressBar}] ${ramPercentage}%
+  🌍 *Lᴏᴄᴀᴛɪᴏɴ:* Kenya 🇰🇪
+└─────────────────────┘
+
+*ᴄᴜʀʀᴇɴᴛ ᴛɪᴍᴇ:* ${time} | ${date}
+━━━━━━━━━━━━━━━━━━━━━━━`;
+
+    // Grouping & Styling Categories
     const categories = {};
-    for (const cmd of commands) {
+    commands.forEach(cmd => {
       if (cmd.category && !cmd.dontAdd && cmd.pattern) {
-        const cat = normalize(cmd.category);
-        categories[cat] = categories[cat] || [];
+        const cat = cmd.category.toUpperCase();
+        if (!categories[cat]) categories[cat] = [];
         categories[cat].push(cmd.pattern.split('|')[0]);
       }
-    }
+    });
 
-    // --- DYNAMIC CATEGORY BOXES ---
-    for (const cat of Object.keys(categories).sort()) {
-      const emoji = emojiByCategory[cat] || '✨';
-      menu += `\n\n╭━❮ ${emoji} *${toUpperStylized(cat)}* ❯━━┈⊷\n`;
-      
+    // Elegant Boxed Category Layout
+    Object.keys(categories).sort().forEach(cat => {
+      menu += `\n\n╭━━〔 *${cat}* 〕━━┈⊷\n┃\n`;
       const categoryCmds = categories[cat].sort();
-      for (const c of categoryCmds) {
-        menu += `┃  ✞︎ ${prefix}${c}\n`;
+      
+      // Multi-column row styling
+      for (let i = 0; i < categoryCmds.length; i += 2) {
+        const cmd1 = `🔹 ${prefix}${categoryCmds[i]}`;
+        const cmd2 = categoryCmds[i+1] ? `🔹 ${prefix}${categoryCmds[i+1]}` : "";
+        menu += `┃ ${cmd1.padEnd(15)} ${cmd2}\n`;
       }
       
-      menu += `╰━━━━━━━━━━━━━━┈⊷`;
-    }
+      menu += `┃\n╰━━━━━━━━━━━━━┈⊷`;
+    });
 
-    menu += `\n\n  ✰ *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ* ✰\n   Stay smart • Clean • Advanced\n━━━━━━━━━━━━━━━━━━`;
+    menu += `\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ* 🤖`;
 
-    // --- SEND MESSAGE ---
-    await conn.sendMessage(
-      from,
-      {
-        image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
-        caption: menu,
-        contextInfo: {
-          mentionedJid: [sender],
-          forwardingScore: 999,
-          isForwarded: true,
-          forwardedNewsletterMessageInfo: {
-            newsletterJid: config.NEWSLETTER_JID || '120363289379419860@newsletter',
-            newsletterName: "『 𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐕𝟐 』",
-            serverMessageId: 143
-          }
+    // Sending with a high-quality "Card" feel
+    await conn.sendMessage(from, {
+      image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
+      caption: menu,
+      contextInfo: {
+        mentionedJid: [sender],
+        isForwarded: true,
+        forwardingScore: 999,
+        externalAdReply: {
+          title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2 ᴀᴅᴠᴀɴᴄᴇᴅ ᴘᴀɴᴇʟ",
+          body: "Created by Popkid Kenya",
+          thumbnailUrl: "https://files.catbox.moe/kiy0hl.jpg",
+          sourceUrl: "https://github.com/Popkid-Tech",
+          mediaType: 1,
+          renderLargerThumbnail: true
         }
-      },
-      { quoted: quotedContact }
-    );
-
-    // Optional Audio Trigger
-    if (config.MENU_AUDIO_URL) {
-      await conn.sendMessage(from, { 
-        audio: { url: config.MENU_AUDIO_URL }, 
-        mimetype: 'audio/mp4', 
-        ptt: true 
-      }, { quoted: mek });
-    }
+      }
+    }, { quoted: mek });
 
   } catch (e) {
-    console.error('Menu Error:', e);
-    await reply(`❌ Error loading menu: ${e.message}`);
+    reply(`❌ Error: ${e.message}`);
   }
 });
