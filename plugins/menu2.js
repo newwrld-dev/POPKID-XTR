@@ -7,7 +7,7 @@ const { getPrefix } = require('../lib/prefix');
 cmd({
   pattern: 'menu2',
   alias: ['allmenu2', 'help2'],
-  react: '💎',
+  react: '👌',
   category: 'main',
   filename: __filename
 }, async (conn, mek, m, { from, sender, reply }) => {
@@ -18,12 +18,10 @@ cmd({
     const hour = moment.tz('Africa/Nairobi').hour();
     const greeting = hour < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" : hour < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" : "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
     
-    const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
-    
     let menuText = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
 ┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
 ┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
-┃⚡ *ᴍᴏᴅᴇ*: ${mode}
+┃⚡ *ᴍᴏᴅᴇ*: ${config.MODE}
 ┃📅 *ᴅᴀᴛᴇ*: ${date}
 ┃🕒 *ᴛɪᴍᴇ*: ${time}
 ┃⚙️ *ᴄᴍᴅs*: ${commands.length}
@@ -31,35 +29,46 @@ cmd({
 
 Welcome to *ᴘᴏᴘᴋɪᴅ-ᴍᴅ*. Select a button below to explore.`;
 
-    // Gifted-MD Button Structure
+    // Modern Interactive Button Structure
     const buttons = [
-        { buttonId: `${prefix}ping`, buttonText: { displayText: '🚀 SPEED' }, type: 1 },
-        { buttonId: `${prefix}list`, buttonText: { displayText: '📜 ALL COMMANDS' }, type: 1 },
-        { buttonId: `${prefix}owner`, buttonText: { displayText: '👤 OWNER' }, type: 1 }
+        {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+                display_text: "🚀 SPEED",
+                id: `${prefix}ping`
+            })
+        },
+        {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+                display_text: "📜 ALL COMMANDS",
+                id: `${prefix}list`
+            })
+        },
+        {
+            name: "quick_reply",
+            buttonParamsJson: JSON.stringify({
+                display_text: "👤 OWNER",
+                id: `${prefix}owner`
+            })
+        }
     ];
 
-    const buttonMessage = {
-        image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
-        caption: menuText,
-        footer: 'ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ',
-        buttons: buttons,
-        headerType: 4,
-        contextInfo: {
-            mentionedJid: [sender],
-            externalAdReply: {
-                title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2",
-                body: "ᴀᴅᴠᴀɴᴄᴇᴅ ᴡʜᴀᴛsᴀᴘᴘ ʙᴏᴛ",
-                mediaType: 1,
-                sourceUrl: "https://whatsapp.com/channel/0029Vag99462UPBF93786o1X",
-                thumbnailUrl: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg',
-                renderLargerThumbnail: true,
-                showAdAttribution: true
+    const message = {
+        interactiveMessage: {
+            header: {
+                hasMediaAttachment: true,
+                imageMessage: (await conn.prepareMessageMedia({ image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' } }, { upload: conn.waUploadToServer })).imageMessage,
+            },
+            body: { text: menuText },
+            footer: { text: 'ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ' },
+            nativeFlowMessage: {
+                buttons: buttons
             }
         }
     };
 
-    // Using the Gifted-MD connection to send
-    return await conn.sendMessage(from, buttonMessage, { quoted: mek });
+    return await conn.sendMessage(from, { viewOnceMessage: { message } }, { quoted: mek });
 
   } catch (e) {
     console.error(e);
