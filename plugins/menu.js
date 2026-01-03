@@ -5,9 +5,9 @@ const os = require('os');
 const { getPrefix } = require('../lib/prefix');
 
 const formatSize = (bytes) => {
-    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
-    if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
-    return (bytes / 1024).toFixed(2) + ' KB';
+    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + 'GB';
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + 'MB';
+    return (bytes / 1024).toFixed(0) + 'KB';
 };
 
 cmd({
@@ -20,63 +20,49 @@ cmd({
   try {
     const prefix = getPrefix();
     const time = moment.tz('Africa/Nairobi').format('HH:mm:ss');
-    const date = moment.tz('Africa/Nairobi').format('DD/MM/YYYY');
+    const date = moment.tz('Africa/Nairobi').format('DD/MM/YY');
     const hour = moment.tz('Africa/Nairobi').hour();
+    const greeting = hour < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" : hour < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" : "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
     
-    const greeting = hour < 12 ? "Good Morning 🌅" : hour < 17 ? "Good Afternoon ☀️" : "Good Evening 🌙";
-    
-    const start = new Date().getTime();
-    const end = new Date().getTime();
-    const ping = end - start;
+    const start = Date.now();
+    const ping = Date.now() - start;
 
     const cpuModel = os.cpus()[0].model.split(' ')[0];
-    const mode = config.MODE === 'public' ? 'Public' : 'Private';
+    const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
     
     const commandsByCategory = {};
     commands.forEach(command => {
       if (command.category && !command.dontAdd && command.pattern) {
-        const cat = command.category.charAt(0).toUpperCase() + command.category.slice(1);
+        const cat = command.category.toUpperCase();
         if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
         commandsByCategory[cat].push(command.pattern.split('|')[0]);
       }
     });
 
-    // === ADVANCED SCENE-MD HEADER ===
-    let menu = `▓│ *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* │▓
-│▓┌────────···▸
-│▓│▸ *User* : @${sender.split("@")[0]}
-│▓│▸ *Status* : ${greeting}
-│▓│▸ *Owner* : ${config.OWNER_NAME || 'ᴘᴏᴘᴋɪᴅ'}
-│▓└────────────···▸
-│▓┌────────···▸
-│▓│▸ *Mode* : ${mode}
-│▓│▸ *Ping* : ${ping}ms ⚡
-│▓│▸ *Date* : ${date}
-│▓│▸ *Time* : ${time}
-│▓└─────────···▸
-│▓┌────────···▸
-│▓│▸ *Memory* : ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
-│▓│▸ *CPU* : ${cpuModel}
-│▓│▸ *Commands* : ${commands.length}
-│▓│▸ *Theme* : *POPKID-MD*
-│▓└───────────────···▸
-╚══════ ▓▓ ࿇ ▓▓ ══════╝
-> ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴀɪ ʙʏ ᴘᴏᴘᴋɪᴅ 🇰🇪
+    // === COMPACT SCENE-MD DESIGN ===
+    let menu = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
+┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
+┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
+┃⚡ *ᴍᴏᴅᴇ*: ${mode}
+┃🚀 *ᴘɪɴɢ*: ${ping}ᴍs
+┃📅 *ᴅᴀᴛᴇ*: ${date}
+┃🕒 *ᴛɪᴍᴇ*: ${time}
+┃📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
+┃💻 *ᴄᴘᴜ*: ${cpuModel}
+┃⚙️ *ᴄᴍᴅs*: ${commands.length}
+┗━━━━━━━━━━━━━━━┈⊷
 
- ▓ *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴄᴏᴍᴍᴀɴᴅs* ▓ \n\n`; 
+*ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵\n`;
 
     for (const category in commandsByCategory) {
-      menu += `╔═══❏ ${category} ❏══╗\n│❒┌─────···▸`;
+      menu += `\n┏━━〔 *${category}* 〕━━┈⊷\n`;
       for (const cmdName of commandsByCategory[category].sort()) {
-        menu += `\n│❒│ ${prefix}${cmdName}`;
+        menu += `┃ ✦ ${prefix}${cmdName}\n`;
       }
-      menu += `\n│❒└────────···▸\n╚════════════════╝\n`;
+      menu += `┗━━━━━━━━━━━━━━━┈⊷\n`;
     }
 
-    menu += `
-╔═══════
-> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ ʙᴏᴛ* © 𝐏𝐨𝐩𝐤𝐢𝐝 𝐓𝐞𝐜𝐡 𝟐𝟎𝟐𝟔🇰🇪
-╚═════ ▓▓ ࿇ ▓▓ ═════╝`;
+    menu += `\n> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ* © ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ 𝟸𝟶𝟸𝟼🇰🇪`;
 
     await conn.sendMessage(from, {
       image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
@@ -86,8 +72,8 @@ cmd({
         isForwarded: true,
         forwardingScore: 999,
         externalAdReply: {
-          title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2 ᴀᴅᴠᴀɴᴄᴇᴅ sʏsᴛᴇᴍ",
-          body: "High Performance WhatsApp Bot",
+          title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2 ᴀᴅᴠᴀɴᴄᴇᴅ",
+          body: "ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ",
           thumbnailUrl: config.MENU_IMAGE_URL || "https://files.catbox.moe/kiy0hl.jpg",
           sourceUrl: "https://whatsapp.com/channel/0029Vag99462UPBF93786o1X",
           mediaType: 1,
