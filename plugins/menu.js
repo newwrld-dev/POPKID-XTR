@@ -39,7 +39,8 @@ cmd({
       }
     });
 
-    // === COMPACT SCENE-MD DESIGN ===
+    // === REFINED DESIGN ===
+    // Removed unnecessary spacing and ensures clean line breaks
     let menu = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
 ┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
 ┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
@@ -50,27 +51,26 @@ cmd({
 ┃📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
 ┃💻 *ᴄᴘᴜ*: ${cpuModel}
 ┃⚙️ *ᴄᴍᴅs*: ${commands.length}
-┗━━━━━━━━━━━━━━━┈⊷
-
-*ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵\n`;
+┗━━━━━━━━━━━━━━━┈⊷\n\n*ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵`;
 
     for (const category in commandsByCategory) {
-      menu += `\n┏━━〔 *${category}* 〕━━┈⊷\n`;
-      for (const cmdName of commandsByCategory[category].sort()) {
+      menu += `\n\n┏━━〔 *${category}* 〕━━┈⊷\n`;
+      const sortedCmds = commandsByCategory[category].sort();
+      for (const cmdName of sortedCmds) {
         menu += `┃ ✦ ${prefix}${cmdName}\n`;
       }
-      menu += `┗━━━━━━━━━━━━━━━┈⊷\n`;
+      menu += `┗━━━━━━━━━━━━━━━┈⊷`;
     }
 
-    menu += `\n> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ* © ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ 𝟸𝟶𝟸𝟼🇰🇪`;
+    menu += `\n\n> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ* © ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ 𝟸𝟶𝟸𝟼🇰🇪`;
 
     await conn.sendMessage(from, {
       image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
       caption: menu,
       contextInfo: {
         mentionedJid: [sender],
-        isForwarded: true,
-        forwardingScore: 999,
+        isForwarded: false, // Set to false to reduce message "weight" in some UI versions
+        forwardingScore: 0,
         externalAdReply: {
           title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2 ᴀᴅᴠᴀɴᴄᴇᴅ",
           body: "ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ",
