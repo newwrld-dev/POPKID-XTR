@@ -21,8 +21,7 @@ cmd({
     const prefix = getPrefix();
     const time = moment.tz('Africa/Nairobi').format('HH:mm:ss');
     const date = moment.tz('Africa/Nairobi').format('DD/MM/YY');
-    const hour = moment.tz('Africa/Nairobi').hour();
-    const greeting = hour < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" : hour < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" : "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
+    const greeting = moment.tz('Africa/Nairobi').hour() < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" : moment.tz('Africa/Nairobi').hour() < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" : "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
     
     const start = Date.now();
     const ping = Date.now() - start;
@@ -39,50 +38,54 @@ cmd({
 
     const categoryKeys = Object.keys(commandsByCategory).sort();
 
-    // === CAROUSEL SECTIONS (Left-to-Right Scrolling) ===
+    // Prepare cards for scrolling
     const cards = categoryKeys.map((category) => {
-      const sortedCmds = commandsByCategory[category].sort();
-      let cmdList = sortedCmds.map(cmdName => `┃ ✦ ${prefix}${cmdName}`).join('\n');
+      const cmdList = commandsByCategory[category].sort().map(cmdName => `┃ ✦ ${prefix}${cmdName}`).join('\n');
 
       return {
-        body: { text: `┏━━〔 *${category}* 〕━━┈⊷\n${cmdList}\n┗━━━━━━━━━━━━━━━┈⊷` },
-        footer: { text: `ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ` },
         header: {
+          imageMessage: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
           hasMediaAttachment: true,
-          imageMessage: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' }
         },
-        nativeFlowMessage: { buttons: [] } // No buttons as requested
+        body: { text: `┏━━〔 *${category}* 〕━━┈⊷\n${cmdList}\n┗━━━━━━━━━━━━━━━┈⊷` },
+        footer: { text: "ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ" },
+        nativeFlowMessage: {
+          buttons: [] // No buttons as requested
+        }
       };
     });
 
-    // Main Header Message
-    const headerMessage = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
-┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
-┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
-┃🚀 *ᴘɪɴɢ*: ${ping}ᴍs
-┃📅 *ᴅᴀᴛᴇ*: ${date}
-┃🕒 *ᴛɪᴍᴇ*: ${time}
-┃📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}
-┃⚙️ *ᴄᴍᴅs*: ${commands.length}
-┗━━━━━━━━━━━━━━━┈⊷
+    const headerText = `┏━━━━━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━━━━━┈⊷
+┃ ⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
+┃ ⚡ *sᴛᴀᴛᴜs*: ${greeting}
+┃ 🚀 *ᴘɪɴɢ*: ${ping}ᴍs | 📅 *ᴅᴀᴛᴇ*: ${date}
+┃ 🕒 *ᴛɪᴍᴇ*: ${time} | ⚙️ *ᴄᴍᴅs*: ${commands.length}
+┃ 📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━┈⊷
 
-↔️ *sᴡɪᴘᴇ ʟᴇғᴛ ᴛᴏ ᴠɪᴇᴡ ᴄᴀᴛᴇɢᴏʀɪᴇs*`;
+↔️ *sᴡɪᴘᴇ ʟᴇғᴛ/ʀɪɢʜᴛ ᴛᴏ ᴠɪᴇᴡ ᴘᴀɢᴇs*`;
 
+    // The Interactive Message structure
+    const interactiveMessage = {
+      body: { text: headerText },
+      footer: { text: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ𝟸 ᴇᴅɪᴛɪᴏɴ" },
+      carouselMessage: {
+        cards: cards
+      }
+    };
+
+    // Sending as viewOnce to ensure media type compatibility
     return await conn.sendMessage(from, {
       viewOnceMessage: {
         message: {
-          interactiveMessage: {
-            body: { text: headerMessage },
-            carouselMessage: {
-              cards: cards
-            }
-          }
+          interactiveMessage: interactiveMessage
         }
       }
     }, { quoted: mek });
 
   } catch (e) {
     console.error(e);
-    reply(`❌ Error: ${e.message}`);
+    // Ultimate fallback if media still fails: send text version
+    reply(`❌ Error: ${e.message}\nTry checking your MENU_IMAGE_URL.`);
   }
 });
