@@ -1,8 +1,7 @@
-const { cmd, commands } = require('../command');
+const { cmd } = require('../command');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const fs = require('fs');
 const path = require('path');
-const config = require('../config');
 
 cmd({
     pattern: "setpp",
@@ -13,45 +12,40 @@ cmd({
 },
 async (conn, mek, m, { from, isOwner, reply }) => {
     try {
-        // 1. Owner Security Check
-        if (!isOwner) return reply("❌ This command is only for the Owner, Popkid!");
+        // 1. Check if user is Owner
+        if (!isOwner) return reply("❌ Only Popkid can use this command!");
 
-        // 2. Check if the user replied to an image
+        // 2. Identify the message containing the image
         const quoted = m.quoted ? m.quoted : m;
         const mime = (quoted.msg || quoted).mimetype || '';
 
-        if (!mime.startsWith('image')) return reply("⚠️ Please reply to an image with .setpp");
+        // Check if it is an image
+        if (!mime.includes('image')) {
+            return reply("⚠️ Please reply to an image with .setpp");
+        }
 
-        reply("⏳ Updating profile picture...");
+        reply("⏳ Processing profile picture update...");
 
-        // 3. Define Temporary Path
-        const tmpDir = path.join(__dirname, '../tmp');
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-        const mediaPath = path.join(tmpDir, `pp_${Date.now()}.jpg`);
-
-        // 4. Download Media
+        // 3. Download the image buffer directly (faster and avoids file errors)
+        const messageType = mime.split('/')[0];
         const stream = await downloadContentFromMessage(
             quoted.msg || quoted,
-            'image'
+            messageType
         );
+        
         let buffer = Buffer.from([]);
         for await (const chunk of stream) {
             buffer = Buffer.concat([buffer, chunk]);
         }
 
-        // 5. Save and Update
-        fs.writeFileSync(mediaPath, buffer);
+        // 4. Update the Profile Picture using the buffer directly
+        // This is much faster and doesn't need a 'tmp' folder
+        await conn.updateProfilePicture(conn.user.id, buffer);
 
-        // Update Bot PP
-        await conn.updateProfilePicture(conn.user.id, { url: mediaPath });
-
-        // 6. Cleanup
-        fs.unlinkSync(mediaPath);
-
-        return reply("✅ Bot profile picture updated successfully!");
+        return reply("✅ Successfully updated POPKID-MD profile picture!");
 
     } catch (e) {
-        console.error(e);
-        reply(`❌ Error: ${e.message}`);
+        console.error('SetPP Error:', e);
+        reply(`❌ Failed to update PP: ${e.message}`);
     }
 });
