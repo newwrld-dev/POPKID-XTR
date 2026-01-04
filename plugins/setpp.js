@@ -1,51 +1,50 @@
-const { cmd } = require('../command');
-const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const fs = require('fs');
-const path = require('path');
+const config = require('../config');
+const { cmd } = require('../command');
 
 cmd({
     pattern: "setpp",
-    desc: "Set bot profile picture",
+    desc: "Change bot profile picture",
     category: "owner",
-    react: "🖼️",
+    react: "📸",
     filename: __filename
 },
-async (conn, mek, m, { from, isOwner, reply }) => {
+async (conn, mek, m, { from, isQuoted, mime, reply, isOwner }) => {
     try {
-        // 1. Check if user is Owner
-        if (!isOwner) return reply("❌ Only Popkid can use this command!");
+        // Owner only
+        if (!isOwner) return reply("❌ Owner only command");
 
-        // 2. Identify the message containing the image
-        const quoted = m.quoted ? m.quoted : m;
-        const mime = (quoted.msg || quoted).mimetype || '';
-
-        // Check if it is an image
-        if (!mime.includes('image')) {
-            return reply("⚠️ Please reply to an image with .setpp");
+        // Must reply to image
+        if (!isQuoted || !/image/.test(mime)) {
+            return reply("❌ Reply to an image with `.setpp`");
         }
 
-        reply("⏳ Processing profile picture update...");
+        // Loading reaction
+        await conn.sendMessage(from, {
+            react: { text: "⏳", key: mek.key }
+        });
 
-        // 3. Download the image buffer directly (faster and avoids file errors)
-        const messageType = mime.split('/')[0];
-        const stream = await downloadContentFromMessage(
-            quoted.msg || quoted,
-            messageType
-        );
-        
-        let buffer = Buffer.from([]);
-        for await (const chunk of stream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
+        // Download image (BUFFER)
+        const media = await m.quoted.download();
+        const buffer = Buffer.isBuffer(media)
+            ? media
+            : fs.readFileSync(media);
 
-        // 4. Update the Profile Picture using the buffer directly
-        // This is much faster and doesn't need a 'tmp' folder
+        // CHANGE PROFILE PICTURE ✅
         await conn.updateProfilePicture(conn.user.id, buffer);
 
-        return reply("✅ Successfully updated POPKID-MD profile picture!");
+        // Success
+        await conn.sendMessage(from, {
+            text: "✅ *Profile picture updated successfully*"
+        }, { quoted: mek });
 
-    } catch (e) {
-        console.error('SetPP Error:', e);
-        reply(`❌ Failed to update PP: ${e.message}`);
+    } catch (err) {
+        console.error(err);
+
+        await conn.sendMessage(from, {
+            react: { text: "❌", key: mek.key }
+        });
+
+        reply("❌ Failed to update profile picture");
     }
 });
