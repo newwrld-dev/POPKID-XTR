@@ -13,31 +13,37 @@ async (conn, mek, m, { from, q, reply }) => {
     try {
         if (!q) return reply("❌ Please provide a Facebook video URL.");
 
-        // React with loading
         await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
 
-        // Fetching data from the API
-        const apiUrl = `https://apis.davidcyriltech.my.id/facebook?url=${q}`;
-        const { data } = await axios.get(apiUrl);
+        // FIX: Encode the URL to handle special characters like '&' or '/'
+        const encodedUrl = encodeURIComponent(q);
+        const apiUrl = `https://apis.davidcyriltech.my.id/facebook?url=${encodedUrl}`;
+        
+        const response = await axios.get(apiUrl);
+        const data = response.data;
 
-        if (!data.status || !data.result) {
-            return reply("❌ Failed to fetch video. The link may be private or invalid.");
+        // FIX: Check if 'data' and 'data.result' actually exist before reading them
+        if (!data || !data.status || !data.result) {
+            return reply("❌ Video not found. The link might be private or invalid.");
         }
 
         // Auto-select HD if available, otherwise SD
         const videoUrl = data.result.hd || data.result.sd;
+        
+        if (!videoUrl) {
+            return reply("❌ Could not find a downloadable video link.");
+        }
 
-        // Send the video directly
         await conn.sendMessage(from, {
             video: { url: videoUrl },
             caption: `✅ *ᴘᴏᴘᴋɪᴅ ᴀɪ ғʙ ᴅᴏᴡɴʟᴏᴀᴅᴇʀ*\n\n📌 *Title:* ${data.result.title || "Facebook Video"}\n\n*Created by Popkid from Kenya*`,
         }, { quoted: mek });
 
-        // Success reaction
         await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
 
     } catch (err) {
-        console.error(err);
-        reply("❌ Error: " + err.message);
+        console.error("FB Downloader Error:", err.message);
+        // This stops the 'toString' error from showing to the user
+        reply("❌ System Error: " + (err.response?.data?.message || "API is currently offline."));
     }
 });
