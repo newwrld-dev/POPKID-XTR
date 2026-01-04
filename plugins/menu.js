@@ -5,13 +5,10 @@ const os = require('os');
 const { getPrefix } = require('../lib/prefix');
 
 const formatSize = (bytes) => {
-    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + 'GB';
-    if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + 'MB';
-    return (bytes / 1024).toFixed(0) + 'KB';
+  if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + 'GB';
+  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + 'MB';
+  return (bytes / 1024).toFixed(0) + 'KB';
 };
-
-// Gentle "Read More" – only collapses command list, keeps layout clean
-const readMore = '\n' + String.fromCharCode(8206).repeat(800);
 
 cmd({
   pattern: 'menu',
@@ -26,18 +23,17 @@ cmd({
     const date = moment.tz('Africa/Nairobi').format('DD/MM/YY');
     const hour = moment.tz('Africa/Nairobi').hour();
     const greeting =
-      hour < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" :
-      hour < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" :
-      "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
+      hour < 12 ? 'GOOD MORNING' :
+      hour < 17 ? 'GOOD AFTERNOON' :
+      'GOOD EVENING';
 
     const start = performance.now();
     const cpuModel = os.cpus()[0].model;
     const totalRam = os.totalmem();
     const usedRam = totalRam - os.freemem();
-    const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
     const ping = (performance.now() - start).toFixed(0);
+    const mode = config.MODE === 'public' ? 'PUBLIC' : 'PRIVATE';
 
-    // Group commands by category
     const commandsByCategory = {};
     commands.forEach(command => {
       if (command.category && !command.dontAdd && command.pattern) {
@@ -47,44 +43,41 @@ cmd({
       }
     });
 
-    // Header section (kept 100% same design)
-    let menu = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
-┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
-┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
-┃⚡ *ᴍᴏᴅᴇ*: ${mode}
-┃🚀 *ᴘɪɴɢ*: ${ping}ᴍs
-┃📅 *ᴅᴀᴛᴇ*: ${date}
-┃🕒 *ᴛɪᴍᴇ*: ${time}
-┃📟 *ʀᴀᴍ*: ${formatSize(usedRam)}/${formatSize(totalRam)}
-┃💻 *ᴄᴘᴜ*: ${cpuModel}
-┃⚙️ *ᴄᴍᴅs*: ${commands.length}
-┗━━━━━━━━━━━━━━━┈⊷${readMore}
-*ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵`;
+    // Header box (same layout as your screenshot)
+    let menu = `┌──〔 *POP KID-MD* 〕───
+│⚡ *USER*: @${sender.split('@')[0]}
+│⚡ *STATUS*: ${greeting}
+│⚡ *MODE*: ${mode} 🚀
+│⚡ *PING*: ${ping}MS
+│📅 *DATE*: ${date}
+│🕒 *TIME*: ${time}
+│💾 *RAM*: ${formatSize(usedRam)}/${formatSize(totalRam)}
+│💻 *CPU*: ${cpuModel}
+│⚙️ *CMDS*: ${commands.length}
+└────────────────────`;
 
-    // Add command list per category
+    menu += `\n\n*COMMAND LIST ⤵*`;
+
+    // Command list per category
     for (const category in commandsByCategory) {
       menu += `\n\n┏━━〔 *${category}* 〕━━┈⊷\n`;
-      const sortedCmds = commandsByCategory[category].sort();
-      for (const cmdName of sortedCmds) {
-        menu += `┃ ✦ ${prefix}${cmdName}\n`;
-      }
+      const sorted = commandsByCategory[category].sort();
+      for (const name of sorted) menu += `┃ ✦ ${prefix}${name}\n`;
       menu += `┗━━━━━━━━━━━━━━━┈⊷`;
     }
 
-    menu += `\n\n> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ* © ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ 𝟸𝟶𝟸𝟼🇰🇪`;
+    menu += `\n\n> *POP KID-MD* © POPKID TECH 2026 🇰🇪`;
 
     await conn.sendMessage(from, {
       image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
       caption: menu,
       contextInfo: {
         mentionedJid: [sender],
-        isForwarded: false,
-        forwardingScore: 0,
         externalAdReply: {
-          title: "ᴘᴏᴘᴋɪᴅ-ᴍᴅ ᴠ2 ᴀᴅᴠᴀɴᴄᴇᴅ",
-          body: "ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ",
-          thumbnailUrl: config.MENU_IMAGE_URL || "https://files.catbox.moe/kiy0hl.jpg",
-          sourceUrl: "https://whatsapp.com/channel/0029Vag99462UPBF93786o1X",
+          title: 'POP KID-MD V2 ADVANCED',
+          body: 'Powered by POPKID TECH',
+          thumbnailUrl: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg',
+          sourceUrl: 'https://whatsapp.com/channel/0029Vag99462UPBF93786o1X',
           mediaType: 1,
           renderLargerThumbnail: true
         }
@@ -93,6 +86,6 @@ cmd({
 
   } catch (e) {
     console.error(e);
-    reply(`❌ Error: ${e.message}`);
+    reply('❌ Error: ' + e.message);
   }
 });
