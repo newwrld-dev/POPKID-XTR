@@ -3,7 +3,7 @@ const config = require('../config');
 const { cmd } = require('../command');
 
 cmd({
-    pattern: "mydp",
+    pattern: "setpp",
     desc: "Change bot profile picture",
     category: "owner",
     react: "❤️",
