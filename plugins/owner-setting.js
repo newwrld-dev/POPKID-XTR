@@ -34,7 +34,7 @@ async (conn, mek, m, { from, isOwner, args, reply }) => {
 });
 // 3. Set Profile Picture
 cmd({
-    pattern: "setpp",
+    pattern: "setme",
     desc: "Set bot profile picture.",
     category: "owner",
     react: "🖼️",
