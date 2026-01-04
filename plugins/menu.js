@@ -10,8 +10,8 @@ const formatSize = (bytes) => {
     return (bytes / 1024).toFixed(0) + 'KB';
 };
 
-// Invisible "Read More" character (enough to trigger WhatsApp collapse)
-const readMore = String.fromCharCode(8206).repeat(400);
+// Optimized "Read More" - 4000 characters ensures it works on all devices
+const readMore = String.fromCharCode(8206).repeat(4000);
 
 cmd({
   pattern: 'menu',
@@ -30,7 +30,7 @@ cmd({
     const start = Date.now();
     const ping = Date.now() - start;
 
-    const cpuModel = os.cpus()[0].model; // full CPU model
+    const cpuModel = os.cpus()[0].model; 
     const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
 
     // Organize commands by category
@@ -43,7 +43,7 @@ cmd({
       }
     });
 
-    // Menu header
+    // Menu header with Read More integrated at the end of the box
     let menu = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
 ┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
 ┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
@@ -54,8 +54,9 @@ cmd({
 ┃📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
 ┃💻 *ᴄᴘᴜ*: ${cpuModel}
 ┃⚙️ *ᴄᴍᴅs*: ${commands.length}
-┗━━━━━━━━━━━━━━━┈⊷
-${readMore}\n\n*ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵`;
+┗━━━━━━━━━━━━━━━┈⊷${readMore}
+
+*ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵`;
 
     // Add commands by category
     for (const category in commandsByCategory) {
