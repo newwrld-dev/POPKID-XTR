@@ -10,7 +10,7 @@ const formatSize = (bytes) => {
     return (bytes / 1024).toFixed(0) + 'KB';
 };
 
-// Optimized "Read More" - 4000 characters ensures it works on all devices
+// This count ensures the collapse works without breaking the layout
 const readMore = String.fromCharCode(8206).repeat(4000);
 
 cmd({
@@ -33,7 +33,6 @@ cmd({
     const cpuModel = os.cpus()[0].model; 
     const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
 
-    // Organize commands by category
     const commandsByCategory = {};
     commands.forEach(command => {
       if (command.category && !command.dontAdd && command.pattern) {
@@ -43,7 +42,7 @@ cmd({
       }
     });
 
-    // Menu header with Read More integrated at the end of the box
+    // HEADER - Fixed placement of readMore to prevent layout shifting
     let menu = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
 ┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
 ┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
@@ -54,11 +53,10 @@ cmd({
 ┃📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
 ┃💻 *ᴄᴘᴜ*: ${cpuModel}
 ┃⚙️ *ᴄᴍᴅs*: ${commands.length}
-┗━━━━━━━━━━━━━━━┈⊷${readMore}
-
+┗━━━━━━━━━━━━━━━┈⊷
+${readMore}
 *ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵`;
 
-    // Add commands by category
     for (const category in commandsByCategory) {
       menu += `\n\n┏━━〔 *${category}* 〕━━┈⊷\n`;
       const sortedCmds = commandsByCategory[category].sort();
@@ -68,10 +66,8 @@ cmd({
       menu += `┗━━━━━━━━━━━━━━━┈⊷`;
     }
 
-    // Footer
     menu += `\n\n> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ* © ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ 𝟸𝟶𝟸𝟼🇰🇪`;
 
-    // Send menu as image with rich preview
     await conn.sendMessage(from, {
       image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
       caption: menu,
