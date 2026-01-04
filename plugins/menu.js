@@ -10,6 +10,9 @@ const formatSize = (bytes) => {
     return (bytes / 1024).toFixed(0) + 'KB';
 };
 
+// Gentle "Read More" – only collapses command list, keeps layout clean
+const readMore = '\n' + String.fromCharCode(8206).repeat(800);
+
 cmd({
   pattern: 'menu',
   alias: ['allmenu', 'help'],
@@ -22,14 +25,19 @@ cmd({
     const time = moment.tz('Africa/Nairobi').format('HH:mm:ss');
     const date = moment.tz('Africa/Nairobi').format('DD/MM/YY');
     const hour = moment.tz('Africa/Nairobi').hour();
-    const greeting = hour < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" : hour < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" : "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
+    const greeting =
+      hour < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" :
+      hour < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" :
+      "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
 
     const start = performance.now();
     const cpuModel = os.cpus()[0].model;
     const totalRam = os.totalmem();
     const usedRam = totalRam - os.freemem();
     const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
+    const ping = (performance.now() - start).toFixed(0);
 
+    // Group commands by category
     const commandsByCategory = {};
     commands.forEach(command => {
       if (command.category && !command.dontAdd && command.pattern) {
@@ -39,9 +47,7 @@ cmd({
       }
     });
 
-    const ping = (performance.now() - start).toFixed(0);
-
-    // HEADER - No forced readMore
+    // Header section (kept 100% same design)
     let menu = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
 ┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
 ┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
@@ -52,10 +58,10 @@ cmd({
 ┃📟 *ʀᴀᴍ*: ${formatSize(usedRam)}/${formatSize(totalRam)}
 ┃💻 *ᴄᴘᴜ*: ${cpuModel}
 ┃⚙️ *ᴄᴍᴅs*: ${commands.length}
-┗━━━━━━━━━━━━━━━┈⊷
-
+┗━━━━━━━━━━━━━━━┈⊷${readMore}
 *ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ* ⤵`;
 
+    // Add command list per category
     for (const category in commandsByCategory) {
       menu += `\n\n┏━━〔 *${category}* 〕━━┈⊷\n`;
       const sortedCmds = commandsByCategory[category].sort();
