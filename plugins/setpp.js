@@ -9,42 +9,37 @@ cmd({
     react: "❤️",
     filename: __filename
 },
-async (conn, mek, m, { from, isQuoted, mime, reply, isOwner }) => {
+async (conn, mek, m, { from, reply, isOwner }) => {
     try {
-        // Owner only
+        // Owner check
         if (!isOwner) return reply("❌ Owner only command");
 
-        // Must reply to image
-        if (!isQuoted || !/image/.test(mime)) {
-            return reply("❌ Reply to an image with `.setpp`");
-        }
+        // Check if there is a quoted message
+        const quoted = m.msg.contextInfo ? m.msg.contextInfo.quotedMessage : null;
+        if (!quoted) return reply("❌ Please reply to an image.");
 
-        // Loading reaction
-        await conn.sendMessage(from, {
-            react: { text: "⏳", key: mek.key }
-        });
+        // Check if the quoted message is an image
+        const mime = quoted.imageMessage ? 'image/jpeg' : null;
+        if (!mime) return reply("❌ Please reply to an **image** only.");
 
-        // Download image (BUFFER)
-        const media = await m.quoted.download();
-        const buffer = Buffer.isBuffer(media)
-            ? media
-            : fs.readFileSync(media);
+        // React with loading
+        await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
 
-        // CHANGE PROFILE PICTURE ✅
+        // Download the media from the quoted message
+        const buffer = await m.quoted.download();
+
+        // Update the Profile Picture
+        // Use conn.user.id or conn.decodeJid(conn.user.id)
         await conn.updateProfilePicture(conn.user.id, buffer);
 
-        // Success
+        // Success notification
         await conn.sendMessage(from, {
-            text: "✅ *Profile picture updated successfully*"
+            text: "✅ *Profile picture updated successfully!*"
         }, { quoted: mek });
 
     } catch (err) {
-        console.error(err);
-
-        await conn.sendMessage(from, {
-            react: { text: "❌", key: mek.key }
-        });
-
-        reply("❌ Failed to update profile picture");
+        console.error("Error updating DP:", err);
+        await conn.sendMessage(from, { react: { text: "❌", key: mek.key } });
+        reply("❌ Error: " + err.message);
     }
 });
