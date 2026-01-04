@@ -1,45 +1,75 @@
 const axios = require('axios');
 const { cmd } = require('../command');
 
+// Temporary storage for user choices
+let fbCache = {};
+
 cmd({
     pattern: "facebook",
     alias: ["fb", "fbdl"],
-    desc: "Download Facebook videos",
+    desc: "Download Facebook videos with quality choice",
     category: "download",
     react: "🔵",
     filename: __filename
 },
 async (conn, mek, m, { from, q, reply }) => {
     try {
-        if (!q) return reply("❌ Please provide a Facebook video URL.\n\n*Example:* .facebook https://www.facebook.com/share/v/xxxx");
+        if (!q) return reply("❌ Please provide a Facebook URL.");
 
-        // React with loading
         await conn.sendMessage(from, { react: { text: "⏳", key: mek.key } });
 
-        // API Request to David Cyril's API
-        const apiUrl = `https://apis.davidcyriltech.my.id/facebook3?url=${q}`;
+        const apiUrl = `https://apis.davidcyriltech.my.id/facebook?url=${q}`;
         const response = await axios.get(apiUrl);
         const data = response.data;
 
-        // Check for success
-        if (!data.status || !data.result) {
-            return reply("❌ Failed to fetch video. The link might be private or invalid.");
-        }
+        if (!data.status || !data.result) return reply("❌ Video not found.");
 
-        const videoUrl = data.result.hd || data.result.sd; // Prioritize HD quality
-        const videoTitle = data.result.title || "Facebook Video";
+        // Save links in cache for this specific user/chat
+        fbCache[from] = {
+            hd: data.result.hd,
+            sd: data.result.sd,
+            title: data.result.title || "Facebook Video"
+        };
 
-        // Send the Video
-        await conn.sendMessage(from, {
-            video: { url: videoUrl },
-            caption: `✅ *Facebook Video Downloaded*\n\n📌 *Title:* ${videoTitle}\n\n*ᴘᴏᴘᴋɪᴅ ᴀɪ*`,
-        }, { quoted: mek });
+        const menu = `🎬 *ᴘᴏᴘᴋɪᴅ ᴀɪ ғʙ ᴅᴏᴡɴʟᴏᴀᴅᴇʀ*\n\n` +
+                     `📌 *Title:* ${fbCache[from].title}\n\n` +
+                     `Please reply with a number:\n` +
+                     `1️⃣ *High Quality (HD)*\n` +
+                     `2️⃣ *Standard Quality (SD)*\n\n` +
+                     `_Example: Reply with 1_`;
 
-        // Success reaction
-        await conn.sendMessage(from, { react: { text: "✅", key: mek.key } });
+        return reply(menu);
 
     } catch (err) {
-        console.error(err);
-        reply("❌ Error downloading Facebook video. Please try again later.");
+        reply("❌ Error fetching video.");
+    }
+});
+
+// Listener for the user's choice (1 or 2)
+cmd({
+    on: "body"
+},
+async (conn, mek, m, { from, body, isQuoted }) => {
+    // Only trigger if we have a pending FB download in this chat
+    if (fbCache[from] && (body === "1" || body === "2")) {
+        try {
+            const selected = body === "1" ? fbCache[from].hd : fbCache[from].sd;
+            const quality = body === "1" ? "HD" : "SD";
+
+            if (!selected) return reply(`❌ ${quality} version is not available for this video.`);
+
+            await conn.sendMessage(from, { react: { text: "📥", key: mek.key } });
+
+            await conn.sendMessage(from, {
+                video: { url: selected },
+                caption: `✅ *Downloaded in ${quality}*\n\n*ᴘᴏᴘᴋɪᴅ ❤️*`
+            }, { quoted: mek });
+
+            // Clear cache after sending
+            delete fbCache[from];
+
+        } catch (err) {
+            reply("❌ Error sending video.");
+        }
     }
 });
