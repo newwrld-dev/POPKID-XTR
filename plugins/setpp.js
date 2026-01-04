@@ -3,10 +3,10 @@ const config = require('../config');
 const { cmd } = require('../command');
 
 cmd({
-    pattern: "setpp",
+    pattern: "mydp",
     desc: "Change bot profile picture",
     category: "owner",
-    react: "📸",
+    react: "❤️",
     filename: __filename
 },
 async (conn, mek, m, { from, isQuoted, mime, reply, isOwner }) => {
