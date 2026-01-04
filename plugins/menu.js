@@ -10,7 +10,7 @@ const formatSize = (bytes) => {
     return (bytes / 1024).toFixed(0) + 'KB';
 };
 
-// This count ensures the collapse works without breaking the layout
+// Keeps the message collapsible without breaking format
 const readMore = String.fromCharCode(8206).repeat(4000);
 
 cmd({
@@ -27,10 +27,12 @@ cmd({
     const hour = moment.tz('Africa/Nairobi').hour();
     const greeting = hour < 12 ? "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ" : hour < 17 ? "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ" : "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ";
 
-    const start = Date.now();
-    const ping = Date.now() - start;
+    // Real ping calculation
+    const start = performance.now();
 
-    const cpuModel = os.cpus()[0].model; 
+    const cpuModel = os.cpus()[0].model;
+    const totalRam = os.totalmem();
+    const usedRam = totalRam - os.freemem();
     const mode = config.MODE === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ';
 
     const commandsByCategory = {};
@@ -42,7 +44,9 @@ cmd({
       }
     });
 
-    // HEADER - Fixed placement of readMore to prevent layout shifting
+    const ping = (performance.now() - start).toFixed(0);
+
+    // ⚙️ Main Menu Layout (same design preserved)
     let menu = `┏━━〔 *${config.BOT_NAME || 'ᴘᴏᴘᴋɪᴅ-ᴍᴅ'}* 〕━━┈⊷
 ┃⚡ *ᴜsᴇʀ*: @${sender.split("@")[0]}
 ┃⚡ *sᴛᴀᴛᴜs*: ${greeting}
@@ -50,7 +54,7 @@ cmd({
 ┃🚀 *ᴘɪɴɢ*: ${ping}ᴍs
 ┃📅 *ᴅᴀᴛᴇ*: ${date}
 ┃🕒 *ᴛɪᴍᴇ*: ${time}
-┃📟 *ʀᴀᴍ*: ${formatSize(os.totalmem() - os.freemem())}/${formatSize(os.totalmem())}
+┃📟 *ʀᴀᴍ*: ${formatSize(usedRam)}/${formatSize(totalRam)}
 ┃💻 *ᴄᴘᴜ*: ${cpuModel}
 ┃⚙️ *ᴄᴍᴅs*: ${commands.length}
 ┗━━━━━━━━━━━━━━━┈⊷
@@ -68,6 +72,7 @@ ${readMore}
 
     menu += `\n\n> *ᴘᴏᴘᴋɪᴅ-ᴍᴅ* © ᴘᴏᴘᴋɪᴅ ᴛᴇᴄʜ 𝟸𝟶𝟸𝟼🇰🇪`;
 
+    // 🖼️ Send Menu Message
     await conn.sendMessage(from, {
       image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
       caption: menu,
