@@ -2,7 +2,9 @@ const config = require('../config');
 const os = require('os');
 const moment = require('moment-timezone');
 const { cmd, commands } = require('../command');
-const { monospace } = require('../lib/functions'); // Ensure this exists
+
+// Define monospace function here to avoid import issues
+const monospace = (text) => `\`${text}\``;
 
 const formatSize = (bytes) => {
   if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + 'GB';
