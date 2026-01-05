@@ -41,7 +41,7 @@ PREFIX: process.env.PREFIX || ".",
 AUTO_BIO: process.env.AUTO_BIO || "true",// Replace with your authorized numbers
     
   // Timezone for the auto-bio feature
-TIME_ZONE: process.env.TIME_ZONE || "Asia/Kolkata",  // Change to your preferred timezone
+TIME_ZONE: process.env.TIME_ZONE || "Africa/Nairobi",  // Updated to your Kenyan timezone
 // add your prifix for bot   
 BOT_NAME: process.env.BOT_NAME || "𝐏𝐎𝐏𝐊𝐈𝐃 𝐌𝐃",
 // add bot namw here for menu
@@ -89,6 +89,10 @@ DEV: process.env.DEV || "254732297194",
 //replace with your whatsapp number        
 ANTI_VV: process.env.ANTI_VV || "true",
 // true for anti once view 
-AUTO_RECORDING: process.env.AUTO_RECORDING || "false"
+AUTO_RECORDING: process.env.AUTO_RECORDING || "false",
 // make it true for auto recoding 
+
+// Newsletter Settings
+NEWSLETTER_JID: process.env.NEWSLETTER_JID || "120363289379419860@newsletter",
+MAX_RETRIES: process.env.MAX_RETRIES || "3"
 };
