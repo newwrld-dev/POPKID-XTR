@@ -268,7 +268,7 @@ conn?.ev?.on('messages.update', async updates => {
     }
   if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REACT === "true"){
     const ravlike = await conn.decodeJid(conn.user.id);
-    const emojis = ['💚','💛'];
+    const emojis = ['💚','💚'];
     const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
     await conn.sendMessage(mek.key.remoteJid, {
       react: {
