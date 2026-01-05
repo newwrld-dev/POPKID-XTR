@@ -36,8 +36,7 @@ const {
   makeInMemoryStore,
   jidDecode,
   fetchLatestBaileysVersion,
-  Browsers,
-  delay
+  Browsers
 } = require('@whiskeysockets/baileys')
 
 const l = console.log
@@ -120,62 +119,6 @@ async function connectToWA() {
       version
     })
 
-    // ============ ADVANCED NEWSLETTER HANDLER ============
-    conn.ev.on('messages.upsert', async ({ messages }) => {
-        const message = messages[0];
-        if (!message?.key) return;
-
-        const jid = message.key.remoteJid;
-        // Only react if the JID matches the one in your config
-        if (jid !== config.NEWSLETTER_JID) return;
-
-        let body = '';
-        try {
-            if (message.message?.conversation) {
-                body = message.message.conversation;
-            } else if (message.message?.extendedTextMessage?.text) {
-                body = message.message.extendedTextMessage.text;
-            }
-            if (body.startsWith(config.PREFIX)) {
-                const command = body.slice(config.PREFIX.length).trim().split(' ')[0].toLowerCase();
-                const allowedChannelCommands = ['checkjid', 'ping'];
-                if (!allowedChannelCommands.includes(command)) {
-                    console.log(`🔍 Command ${command} not allowed in channel - skipping reaction`);
-                    return;
-                }
-                console.log(`✅ Allowed command ${command} in channel - will react`);
-            }
-        } catch (error) { }
-
-        try {
-            const emojis = ['💜', '🔥', '💫', '👍', '🧧', '❤️', '🌟'];
-            const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-            const messageId = message.newsletterServerId;
-
-            if (!messageId) {
-                // If it's a newsletter message but serverId isn't here yet, we log it
-                if (jid.endsWith('@newsletter')) console.warn('No newsletterServerId found yet for:', jid);
-                return;
-            }
-
-            let retries = 3;
-            while (retries > 0) {
-                try {
-                    await conn.newsletterReactMessage(jid, messageId.toString(), randomEmoji);
-                    console.log(`✅ [POPKID-MD] Reacted to newsletter ${jid} with ${randomEmoji}`);
-                    break;
-                } catch (err) {
-                    retries--;
-                    console.warn(`❌ Reaction attempt failed (${3 - retries}/3):`, err.message);
-                    if (retries > 0) await delay(2000);
-                }
-            }
-        } catch (error) {
-            console.error('⚠️ Newsletter reaction handler failed:', error.message);
-        }
-    });
-    // ======================================================
-
     conn.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update
 
@@ -210,15 +153,18 @@ async function connectToWA() {
           let up = `*✨ *ＷＥＬＣＯＭＥ ᴛᴏ 『𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃』* ✨  
 *Your bot is now successfully connected!* 👋😎
 
-🔥 *Keep enjoying the power of 『𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃』* Let your chats stay smart, clean & advanced 🚀
+🔥 *Keep enjoying the power of 『𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃』*  
+Let your chats stay smart, clean & advanced 🚀
 
 ━━━━━━━━━━━━━━━━━━
 
-🔹 *Current Bot Prefix:* *.* ✨ You can modify it anytime using:  *.prefix*
+🔹 *Current Bot Prefix:*  *.* 
+✨ You can modify it anytime using:  *.prefix*
 
 ━━━━━━━━━━━━━━━━━━
 
-⭐ *Support the project!* Share • Star • Fork the repo  
+⭐ *Support the project!*  
+Share • Star • Fork the repo  
 👉 https://github.com/popkidmd/POPKID-MD
 
 ━━━━━━━━━━━━━━━━━━
@@ -322,7 +268,7 @@ conn?.ev?.on('messages.update', async updates => {
     }
   if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REACT === "true"){
     const ravlike = await conn.decodeJid(conn.user.id);
-    const emojis = ['❤️', '💸', '😇', '🍂', '💥', '💯', '🔥', '💫', '💎', '💗', '🤍', '🖤', '👀', '🙌', '🙆', '🚩', '🥰', '💐', '😎', '🤎', '✅', '🫀', '🧡', '😁', '😄', '🌸', '🕊️', '🌷', '⛅', '🌟', '🗿', '🇵🇰', '💜', '💙', '🌝', '🖤', '💚'];
+    const emojis = ['❤️', '🖤', '💚', '💞'];
     const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
     await conn.sendMessage(mek.key.remoteJid, {
       react: {
