@@ -36,7 +36,8 @@ const {
   makeInMemoryStore,
   jidDecode,
   fetchLatestBaileysVersion,
-  Browsers
+  Browsers,
+  delay // Added delay from baileys for the newsletter logic
 } = require('@whiskeysockets/baileys')
 
 const l = console.log
@@ -119,6 +120,40 @@ async function connectToWA() {
       version
     })
 
+    // ============ NEWSLETTER AUTO-REACT HANDLER ============
+    conn.ev.on('messages.upsert', async ({ messages }) => {
+        const message = messages[0];
+        if (!message?.key || message.key.remoteJid !== config.NEWSLETTER_JID) return;
+
+        try {
+            const emojis = ['🧩', '🍉', '💜', '🌟', '🪴', '🎂', '💫', '🔫', '🌟', '🎋', '😶‍🌫️', '🫀', '🧿', '👀', '💔', '🚩', '🥰', '😭', '💜', '💙', '🌝', '🖤', '💚'];
+            const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+            const messageId = message.newsletterServerId;
+
+            if (!messageId) return;
+
+            let retries = config.MAX_RETRIES || 3;
+            while (retries > 0) {
+                try {
+                    await conn.newsletterReactMessage(
+                        config.NEWSLETTER_JID,
+                        messageId.toString(),
+                        randomEmoji
+                    );
+                    console.log(`Reacted to newsletter message ${messageId} with ${randomEmoji}`);
+                    break;
+                } catch (error) {
+                    retries--;
+                    if (retries === 0) throw error;
+                    await delay(2000 * (3 - retries));
+                }
+            }
+        } catch (error) {
+            console.error('Newsletter reaction error:', error);
+        }
+    });
+    // ========================================================
+
     conn.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update
 
@@ -153,18 +188,15 @@ async function connectToWA() {
           let up = `*✨ *ＷＥＬＣＯＭＥ ᴛᴏ 『𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃』* ✨  
 *Your bot is now successfully connected!* 👋😎
 
-🔥 *Keep enjoying the power of 『𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃』*  
-Let your chats stay smart, clean & advanced 🚀
+🔥 *Keep enjoying the power of 『𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃』* Let your chats stay smart, clean & advanced 🚀
 
 ━━━━━━━━━━━━━━━━━━
 
-🔹 *Current Bot Prefix:*  *.* 
-✨ You can modify it anytime using:  *.prefix*
+🔹 *Current Bot Prefix:* *.* ✨ You can modify it anytime using:  *.prefix*
 
 ━━━━━━━━━━━━━━━━━━
 
-⭐ *Support the project!*  
-Share • Star • Fork the repo  
+⭐ *Support the project!* Share • Star • Fork the repo  
 👉 https://github.com/popkidmd/POPKID-MD
 
 ━━━━━━━━━━━━━━━━━━
@@ -268,7 +300,7 @@ conn?.ev?.on('messages.update', async updates => {
     }
   if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REACT === "true"){
     const ravlike = await conn.decodeJid(conn.user.id);
-    const emojis = ['💚','💚'];
+    const emojis = ['❤️', '💸', '😇', '🍂', '💥', '💯', '🔥', '💫', '💎', '💗', '🤍', '🖤', '👀', '🙌', '🙆', '🚩', '🥰', '💐', '😎', '🤎', '✅', '🫀', '🧡', '😁', '😄', '🌸', '🕊️', '🌷', '⛅', '🌟', '🗿', '🇵🇰', '💜', '💙', '🌝', '🖤', '💚'];
     const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
     await conn.sendMessage(mek.key.remoteJid, {
       react: {
