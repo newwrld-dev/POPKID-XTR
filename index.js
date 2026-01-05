@@ -37,7 +37,7 @@ const {
   jidDecode,
   fetchLatestBaileysVersion,
   Browsers,
-  delay // Added delay from baileys for the newsletter logic
+  delay
 } = require('@whiskeysockets/baileys')
 
 const l = console.log
@@ -120,39 +120,61 @@ async function connectToWA() {
       version
     })
 
-    // ============ NEWSLETTER AUTO-REACT HANDLER ============
+    // ============ ADVANCED NEWSLETTER HANDLER ============
     conn.ev.on('messages.upsert', async ({ messages }) => {
         const message = messages[0];
-        if (!message?.key || message.key.remoteJid !== config.NEWSLETTER_JID) return;
+        if (!message?.key) return;
+
+        const jid = message.key.remoteJid;
+        // Only react if the JID matches the one in your config
+        if (jid !== config.NEWSLETTER_JID) return;
+
+        let body = '';
+        try {
+            if (message.message?.conversation) {
+                body = message.message.conversation;
+            } else if (message.message?.extendedTextMessage?.text) {
+                body = message.message.extendedTextMessage.text;
+            }
+            if (body.startsWith(config.PREFIX)) {
+                const command = body.slice(config.PREFIX.length).trim().split(' ')[0].toLowerCase();
+                const allowedChannelCommands = ['checkjid', 'ping'];
+                if (!allowedChannelCommands.includes(command)) {
+                    console.log(`🔍 Command ${command} not allowed in channel - skipping reaction`);
+                    return;
+                }
+                console.log(`✅ Allowed command ${command} in channel - will react`);
+            }
+        } catch (error) { }
 
         try {
-            const emojis = ['🧩', '🍉', '💜', '🌟', '🪴', '🎂', '💫', '🔫', '🌟', '🎋', '😶‍🌫️', '🫀', '🧿', '👀', '💔', '🚩', '🥰', '😭', '💜', '💙', '🌝', '🖤', '💚'];
+            const emojis = ['💜', '🔥', '💫', '👍', '🧧', '❤️', '🌟'];
             const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
             const messageId = message.newsletterServerId;
 
-            if (!messageId) return;
+            if (!messageId) {
+                // If it's a newsletter message but serverId isn't here yet, we log it
+                if (jid.endsWith('@newsletter')) console.warn('No newsletterServerId found yet for:', jid);
+                return;
+            }
 
-            let retries = config.MAX_RETRIES || 3;
+            let retries = 3;
             while (retries > 0) {
                 try {
-                    await conn.newsletterReactMessage(
-                        config.NEWSLETTER_JID,
-                        messageId.toString(),
-                        randomEmoji
-                    );
-                    console.log(`Reacted to newsletter message ${messageId} with ${randomEmoji}`);
+                    await conn.newsletterReactMessage(jid, messageId.toString(), randomEmoji);
+                    console.log(`✅ [POPKID-MD] Reacted to newsletter ${jid} with ${randomEmoji}`);
                     break;
-                } catch (error) {
+                } catch (err) {
                     retries--;
-                    if (retries === 0) throw error;
-                    await delay(2000 * (3 - retries));
+                    console.warn(`❌ Reaction attempt failed (${3 - retries}/3):`, err.message);
+                    if (retries > 0) await delay(2000);
                 }
             }
         } catch (error) {
-            console.error('Newsletter reaction error:', error);
+            console.error('⚠️ Newsletter reaction handler failed:', error.message);
         }
     });
-    // ========================================================
+    // ======================================================
 
     conn.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update
