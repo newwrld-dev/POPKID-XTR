@@ -1,96 +1,108 @@
-const fetch = require('node-fetch');
 const { cmd } = require('../command');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
 
+// Temporary storage to remember search results for replies
+// This stays in memory while the bot is running
+if (!global.movie_cache) {
+    global.movie_cache = {};
+}
+
+/**
+ * MOVIE SEARCH COMMAND
+ */
 cmd({
     pattern: "movie",
-    desc: "Fetch Sinhala dubbed movie info or auto download MP4",
+    desc: "Search for a movie and get a download menu",
     category: "media",
     react: "🎬",
     filename: __filename
 },
-async (conn, mek, m, { from, args }) => {
+async (conn, mek, m, { from, args, reply }) => {
     try {
         const text = args.join(" ");
-        if (!text)
-            return conn.sendMessage(from, { text: "🎬 Provide a movie name or link.\n\nExample:\n.movie venom" }, { quoted: mek });
+        if (!text) return reply("🎬 Please provide a movie name.\n\nExample: .movie venom");
 
-        const loading = await conn.sendMessage(from, { text: "🔍 Searching for movie..." }, { quoted: mek });
-
-        let movieUrl = "";
-        // If direct link
-        if (text.includes("dinkamovieslk.blogspot.com")) {
-            movieUrl = text.trim();
-        } else {
-            // Search by name
-            const searchApi = `https://api.srihub.store/movie/dinkasearch?apikey=dew_5H5Dbuh4v7NbkNRmI0Ns2u2ZK240aNnJ9lnYQXR9&query=${encodeURIComponent(text)}`;
-            const searchRes = await fetch(searchApi);
-            const searchData = await searchRes.json();
-
-            if (!searchData.success || !searchData.result?.length)
-                return conn.sendMessage(from, { text: `❌ No results found for *${text}*.` }, { quoted: mek });
-
-            movieUrl = searchData.result[0].url;
+        // 1. Search for the movie
+        const searchApi = `https://api.srihub.store/movie/dinkasearch?apikey=dew_5H5Dbuh4v7NbkNRmI0Ns2u2ZK240aNnJ9lnYQXR9&query=${encodeURIComponent(text)}`;
+        const searchRes = await axios.get(searchApi);
+        
+        if (!searchRes.data.success || !searchRes.data.result.length) {
+            return reply(`❌ No results found for *${text}*.`);
         }
 
-        // Get movie details
-        const apiURL = `https://api.srihub.store/movie/dinkadl?apikey=dew_5H5Dbuh4v7NbkNRmI0Ns2u2ZK240aNnJ9lnYQXR9&url=${encodeURIComponent(movieUrl)}`;
-        const res = await fetch(apiURL);
-        const data = await res.json();
+        // Use the first result
+        const movieUrl = searchRes.data.result[0].url;
 
-        if (!data.success || !data.result)
-            return conn.sendMessage(from, { text: "❌ Could not fetch movie details." }, { quoted: mek });
+        // 2. Fetch download details
+        const detailApi = `https://api.srihub.store/movie/dinkadl?apikey=dew_5H5Dbuh4v7NbkNRmI0Ns2u2ZK240aNnJ9lnYQXR9&url=${encodeURIComponent(movieUrl)}`;
+        const detailRes = await axios.get(detailApi);
+        const movie = detailRes.data.result;
 
-        const movie = data.result;
+        if (!detailRes.data.success || !movie) return reply("❌ Could not fetch movie details.");
 
-        // Format info
-        let caption = `🎬 *${movie.title}*\n\n📖 *Description:*\n${movie.description.slice(0, 400)}...\n\n`;
-        caption += `📥 *Download Options:*\n`;
-        movie.downloads.forEach(dl => {
-            caption += `\n🔹 *${dl.quality}* ➤ ${dl.url}`;
+        // 3. Save to global cache so we can handle the reply
+        global.movie_cache[from] = {
+            title: movie.title,
+            downloads: movie.downloads
+        };
+
+        // 4. Format the menu exactly like your screenshot
+        let menuText = `🎬 *${movie.title}*\n\n`;
+        movie.downloads.forEach((dl, index) => {
+            menuText += `${index + 1} | ❱❱ Download - ${dl.quality} 📁\n`;
         });
+        menuText += `\nReply with quality number\n\n© DEW MD BY DEWMINA`;
 
-        await conn.sendMessage(from, { image: { url: movie.poster }, caption }, { quoted: mek });
-
-        // Attempt auto-download for smallest file (480p)
-        const smallest = movie.downloads.find(d => d.quality.includes("480")) || movie.downloads[0];
-        const url = smallest.url;
-
-        const tempFile = path.join(__dirname, `temp_${Date.now()}.mp4`);
-        const response = await axios({
-            url,
-            method: 'GET',
-            responseType: 'stream'
-        });
-
-        let totalLength = parseInt(response.headers['content-length'] || "0");
-        if (totalLength > 100 * 1024 * 1024) {
-            // Too large to send
-            await conn.sendMessage(from, {
-                text: `⚠️ The file is too large to send via WhatsApp.\n\n📥 Download manually:\n${url}`
-            }, { quoted: mek });
-        } else {
-            // Save locally
-            const writer = fs.createWriteStream(tempFile);
-            response.data.pipe(writer);
-            await new Promise(resolve => writer.on('finish', resolve));
-
-            // Send the MP4 file
-            await conn.sendMessage(from, {
-                video: { url: tempFile },
-                caption: `🎬 *${movie.title}* (480p)`,
-                mimetype: "video/mp4"
-            }, { quoted: mek });
-
-            fs.unlinkSync(tempFile); // delete after sending
-        }
-
-        await conn.sendMessage(from, { text: "✅ Movie sent successfully!", edit: loading.key });
+        // 5. Send poster with the menu
+        await conn.sendMessage(from, { 
+            image: { url: movie.poster }, 
+            caption: menuText 
+        }, { quoted: mek });
 
     } catch (err) {
-        console.error("🎬 Movie Command Error:", err);
-        conn.sendMessage(from, { text: "⚠️ Error fetching or sending the movie." }, { quoted: mek });
+        console.error("Movie Command Error:", err);
+        reply("⚠️ Error connecting to the movie server.");
+    }
+});
+
+/**
+ * REPLY HANDLER (To catch the "3")
+ * This command has no pattern; it listens for numbers when a movie is cached.
+ */
+cmd({
+    on: "text"
+},
+async (conn, mek, m, { from, body, reply }) => {
+    const prefix = "."; // Adjust if your prefix is different
+    if (body.startsWith(prefix)) return; // Ignore other commands
+    
+    // Check if the user has a pending movie selection
+    if (global.movie_cache[from]) {
+        const selectedIndex = parseInt(body.trim()) - 1;
+        const movieData = global.movie_cache[from];
+
+        // Check if the input is a valid number from the list
+        if (!isNaN(selectedIndex) && movieData.downloads[selectedIndex]) {
+            const selectedLink = movieData.downloads[selectedIndex];
+
+            await conn.sendMessage(from, { react: { text: "📥", key: mek.key } });
+
+            try {
+                // Sending as a document is better for large files (like 500MB+)
+                await conn.sendMessage(from, { 
+                    document: { url: selectedLink.url }, 
+                    mimetype: 'video/mp4', 
+                    fileName: `${movieData.title} (${selectedLink.quality}).mp4`,
+                    caption: `🎬 *${movieData.title}*\nQuality: ${selectedLink.quality}\n\n© DEW MD BY DEWMINA`
+                }, { quoted: mek });
+
+                // Clear cache after sending
+                delete global.movie_cache[from];
+                
+            } catch (uploadError) {
+                console.error("Upload Error:", uploadError);
+                reply("⚠️ The file is too large or the link expired. Try a lower quality.");
+            }
+        }
     }
 });
