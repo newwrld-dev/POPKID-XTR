@@ -1,21 +1,17 @@
 const config = require('../config');
 const os = require('os');
-const fs = require('fs');
-const path = require('path');
 const moment = require('moment-timezone');
 const { cmd, commands } = require('../command');
 
-// Helper: monospace text
+// Define monospace function here to avoid import issues
 const monospace = (text) => `\`${text}\``;
 
-// Helper: format memory size
 const formatSize = (bytes) => {
   if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + 'GB';
   if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + 'MB';
   return (bytes / 1024).toFixed(0) + 'KB';
 };
 
-// Helper: format uptime
 const formatUptime = (seconds) => {
   const d = Math.floor(seconds / (24 * 3600));
   seconds %= 24 * 3600;
@@ -46,19 +42,15 @@ cmd({
     const ram = `${formatSize(usedRam)}/${formatSize(totalRam)}`;
     const ping = Math.floor(Math.random() * 50) + 10; // fake small ping for display
     const mode = config.MODE === 'public' ? 'PUBLIC' : 'PRIVATE';
-
-    // Safe check for commands
-    const totalCommands = Array.isArray(commands) ? commands.filter(a => a.pattern).length : 0;
+    const totalCommands = commands.filter(a => a.pattern).length;
 
     // Group commands by category
     const commandsByCategory = {};
-    if (Array.isArray(commands)) {
-      for (const command of commands) {
-        if (command.category && !command.dontAdd && command.pattern) {
-          const cat = command.category.toUpperCase();
-          if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
-          commandsByCategory[cat].push(command.pattern.split('|')[0]);
-        }
+    for (const command of commands) {
+      if (command.category && !command.dontAdd && command.pattern) {
+        const cat = command.category.toUpperCase();
+        if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
+        commandsByCategory[cat].push(command.pattern.split('|')[0]);
       }
     }
 
@@ -83,20 +75,16 @@ cmd({
       menu += `\n\n╭━━━━❮ *${monospace(category)}* ❯━⊷\n`;
       const sorted = commandsByCategory[category].sort();
       for (const cmdName of sorted) {
-        menu += `┃✞︎ ${monospace(prefix + cmdName)}\n`;
+        menu += `┃◇ ${monospace(prefix + cmdName)}\n`;
       }
       menu += `╰━━━━━━━━━━━━━━━━━⊷`;
     }
 
-    menu += `\n\n> *${config.BOT_NAME || 'POP KID-MD'}* © 𝟸𝟶𝟸𝟼 🇰🇪\n> *ᴘᴏᴘᴋɪᴅ ᴘʀᴏᴊᴇᴄᴛs*`;
+    menu += `\n\n> *${config.BOT_NAME || 'POP KID-MD'}* © 𝟸𝟶𝟸𝟼 🇰🇪\n> *Powered by POPKID TECH*`;
 
-    // Local image path
-    const menuImagePath = path.resolve('./popkid/menu.jpg');
-    const imageBuffer = await fs.promises.readFile(menuImagePath);
-
-    // SEND MENU
+    // SEND MESSAGE
     await conn.sendMessage(from, {
-      image: { path: menuImagePath },
+      image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
       caption: menu,
       contextInfo: {
         mentionedJid: [sender],
@@ -105,7 +93,7 @@ cmd({
         externalAdReply: {
           title: 'POP KID-MD V2 ADVANCED',
           body: 'Powered by POPKID TECH',
-          thumbnail: imageBuffer,
+          thumbnailUrl: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg',
           sourceUrl: 'https://whatsapp.com/channel/0029Vag99462UPBF93786o1X',
           mediaType: 1,
           renderLargerThumbnail: true
