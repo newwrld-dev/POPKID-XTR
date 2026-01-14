@@ -8,7 +8,7 @@ const { File } = require('megajs');
 cmd({
     pattern: "deploy",
     alias: ["setup", "install"],
-    desc: "Deploy a new session via Mega link.",
+    desc: "Deploy a new bot session using Mega session ID",
     category: "owner",
     react: "🚀",
     filename: __filename
@@ -16,54 +16,56 @@ cmd({
 async (conn, mek, m, { from, text, isOwner, reply, sender }) => {
 
     if (!isOwner) {
-        return reply("❌ *This command is restricted to my Developer (Popkid).*");
+        return reply("❌ *This command is restricted to the bot developer.*");
     }
 
     if (!text) {
-        return reply(`❌ *Usage:* ${config.PREFIX}deploy <SESSION_ID>\n\n*Example:* \`${config.PREFIX}deploy POPKID;;;abc#def123\``);
+        return reply(
+            `❌ *Usage:* ${config.PREFIX}deploy <SESSION_ID>\n\n` +
+            `*Example:* ${config.PREFIX}deploy POPKID;;;abc#def123`
+        );
     }
 
     try {
+        // ─── CLEAN SESSION ID ───
         let sessionId = text.trim();
-
-        // remove prefix if exists
         if (sessionId.startsWith('POPKID;;;')) {
             sessionId = sessionId.replace('POPKID;;;', '');
         }
 
         if (!sessionId.includes('#')) {
-            return reply("❌ *Invalid format!* Session ID must be like: abc#def123");
+            return reply("❌ *Invalid SESSION_ID format!*");
         }
 
-        const msg = await conn.sendMessage(from, {
-            text: '✞︎ *𝐃𝐄𝐏𝐋𝐎𝐘𝐈𝐍𝐆 𝐒𝐄𝐒𝐒𝐈𝐎𝐍...*'
-        }, { quoted: mek });
+        // ─── STATUS MESSAGE ───
+        const waitMsg = await conn.sendMessage(
+            from,
+            { text: '✞︎ *DEPLOYING SESSION... PLEASE WAIT*' },
+            { quoted: mek }
+        );
 
-        // unique session
+        // ─── PATHS (BULLETPROOF) ───
+        const projectRoot = path.dirname(require.main.filename);
         const sessionName = `popkid-${Date.now()}`;
+        const sessionDir = path.join(projectRoot, 'sessions', sessionName);
 
-        // multi-session directory
-        const sessionPath = path.resolve(__dirname, '../sessions', sessionName);
-        await fs.mkdir(sessionPath, { recursive: true });
+        await fs.mkdir(sessionDir, { recursive: true });
 
+        // ─── DOWNLOAD CREDS FROM MEGA ───
         const [fileId, key] = sessionId.split('#');
         const file = File.fromURL(`https://mega.nz/file/${fileId}#${key}`);
 
-        // download creds
         const buffer = await new Promise((resolve, reject) => {
             file.download((err, data) => err ? reject(err) : resolve(data));
         });
 
-        await fs.writeFile(path.join(sessionPath, 'creds.json'), buffer);
+        await fs.writeFile(path.join(sessionDir, 'creds.json'), buffer);
 
-        // ✅ FIXED PATH (ENOENT SOLVED)
-        const startFilePath = path.resolve(__dirname, '../multi/startClient.js');
+        // ─── START CLIENT ───
+        const startClientPath = path.join(projectRoot, 'multi', 'startClient.js');
+        await fs.access(startClientPath);
 
-        // ensure file exists
-        await fs.access(startFilePath);
-
-        // fork new bot instance
-        fork(startFilePath, [], {
+        fork(startClientPath, [], {
             env: {
                 ...process.env,
                 SESSION_NAME: sessionName,
@@ -72,28 +74,26 @@ async (conn, mek, m, { from, text, isOwner, reply, sender }) => {
             }
         });
 
-        let status = `╔═══════════════╗
-   ✰  *𝐏𝐎𝐏𝐊𝐈𝐃-𝐌𝐃 𝐃𝐄𝐏𝐋𝐎𝐘* ✰
-╚═══════════════╝
-┌─────────────────┐
-│ ✞︎ **sᴇssɪᴏɴ:** sᴜᴄᴄᴇss ✅
-│ ✞︎ **ɴᴀᴍᴇ:** ${sessionName}
-│ ✞︎ **ᴏᴡɴᴇʀ:** ${sender.split('@')[0]}
-│ ✞︎ **ᴘʀᴇғɪx:** ${config.PREFIX}
-└─────────────────┘
-━━━━━━━━━━━━━━━━━━━━
-✰ *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ* ✰
-━━━━━━━━━━━━━━━━━━━━`;
+        // ─── SUCCESS MESSAGE ───
+        const successMsg = `
+╔════════════════════╗
+║  🚀 *POPKID-MD DEPLOYED*
+╠════════════════════╣
+║ 📦 Session : ${sessionName}
+║ 👑 Owner   : ${sender.split('@')[0]}
+║ 🔑 Prefix  : ${config.PREFIX}
+╚════════════════════╝
+`;
 
         await conn.sendMessage(from, {
             image: { url: 'https://files.catbox.moe/syekq2.jpg' },
-            caption: status
-        });
+            caption: successMsg
+        }, { quoted: mek });
 
-        await conn.sendMessage(from, { delete: msg.key });
+        await conn.sendMessage(from, { delete: waitMsg.key });
 
-    } catch (e) {
-        console.error('[DEPLOY ERROR]', e);
-        reply(`❌ *Deployment Error:* ${e.message}`);
+    } catch (err) {
+        console.error('[DEPLOY ERROR]', err);
+        reply(`❌ *Deployment failed:* ${err.message}`);
     }
 });
