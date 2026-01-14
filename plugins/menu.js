@@ -1,17 +1,21 @@
 const config = require('../config');
 const os = require('os');
+const fs = require('fs');
+const path = require('path');
 const moment = require('moment-timezone');
 const { cmd, commands } = require('../command');
 
-// Define monospace function here to avoid import issues
+// Helper: monospace text
 const monospace = (text) => `\`${text}\``;
 
+// Helper: format memory size
 const formatSize = (bytes) => {
   if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + 'GB';
   if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + 'MB';
   return (bytes / 1024).toFixed(0) + 'KB';
 };
 
+// Helper: format uptime
 const formatUptime = (seconds) => {
   const d = Math.floor(seconds / (24 * 3600));
   seconds %= 24 * 3600;
@@ -82,9 +86,13 @@ cmd({
 
     menu += `\n\n> *${config.BOT_NAME || 'POP KID-MD'}* © 𝟸𝟶𝟸𝟼 🇰🇪\n> *ᴘᴏᴘᴋɪᴅ ᴘʀᴏᴊᴇᴄᴛs*`;
 
+    // Read local image buffer
+    const menuImagePath = path.resolve('./popkid/menu.jpg');
+    const imageBuffer = await fs.promises.readFile(menuImagePath);
+
     // SEND MESSAGE
     await conn.sendMessage(from, {
-      image: { url: config.MENU_IMAGE_URL || 'https://postimg.cc/SX1WqTFj' },
+      image: { path: menuImagePath },
       caption: menu,
       contextInfo: {
         mentionedJid: [sender],
@@ -93,7 +101,7 @@ cmd({
         externalAdReply: {
           title: 'POP KID-MD V2 ADVANCED',
           body: 'Powered by POPKID TECH',
-          thumbnailUrl: config.MENU_IMAGE_URL || 'https://postimg.cc/SX1WqTFj',
+          thumbnail: imageBuffer,
           sourceUrl: 'https://whatsapp.com/channel/0029Vag99462UPBF93786o1X',
           mediaType: 1,
           renderLargerThumbnail: true
