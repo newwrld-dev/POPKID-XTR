@@ -46,15 +46,19 @@ cmd({
     const ram = `${formatSize(usedRam)}/${formatSize(totalRam)}`;
     const ping = Math.floor(Math.random() * 50) + 10; // fake small ping for display
     const mode = config.MODE === 'public' ? 'PUBLIC' : 'PRIVATE';
-    const totalCommands = commands.filter(a => a.pattern).length;
+
+    // Safe check for commands
+    const totalCommands = Array.isArray(commands) ? commands.filter(a => a.pattern).length : 0;
 
     // Group commands by category
     const commandsByCategory = {};
-    for (const command of commands) {
-      if (command.category && !command.dontAdd && command.pattern) {
-        const cat = command.category.toUpperCase();
-        if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
-        commandsByCategory[cat].push(command.pattern.split('|')[0]);
+    if (Array.isArray(commands)) {
+      for (const command of commands) {
+        if (command.category && !command.dontAdd && command.pattern) {
+          const cat = command.category.toUpperCase();
+          if (!commandsByCategory[cat]) commandsByCategory[cat] = [];
+          commandsByCategory[cat].push(command.pattern.split('|')[0]);
+        }
       }
     }
 
@@ -86,11 +90,11 @@ cmd({
 
     menu += `\n\n> *${config.BOT_NAME || 'POP KID-MD'}* © 𝟸𝟶𝟸𝟼 🇰🇪\n> *ᴘᴏᴘᴋɪᴅ ᴘʀᴏᴊᴇᴄᴛs*`;
 
-    // Read local image buffer
+    // Local image path
     const menuImagePath = path.resolve('./popkid/menu.jpg');
     const imageBuffer = await fs.promises.readFile(menuImagePath);
 
-    // SEND MESSAGE
+    // SEND MENU
     await conn.sendMessage(from, {
       image: { path: menuImagePath },
       caption: menu,
