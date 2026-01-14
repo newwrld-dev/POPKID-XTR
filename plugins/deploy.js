@@ -15,7 +15,9 @@ cmd({
 },
 async (conn, mek, m, { from, text, isOwner, reply, sender }) => {
 
-    if (!isOwner) return reply("❌ *This command is restricted to my Developer (Popkid).*");
+    if (!isOwner) {
+        return reply("❌ *This command is restricted to my Developer (Popkid).*");
+    }
 
     if (!text) {
         return reply(`❌ *Usage:* ${config.PREFIX}deploy <SESSION_ID>\n\n*Example:* \`${config.PREFIX}deploy POPKID;;;abc#def123\``);
@@ -24,40 +26,43 @@ async (conn, mek, m, { from, text, isOwner, reply, sender }) => {
     try {
         let sessionId = text.trim();
 
+        // remove prefix if exists
         if (sessionId.startsWith('POPKID;;;')) {
-            sessionId = sessionId.split('POPKID;;;')[1];
+            sessionId = sessionId.replace('POPKID;;;', '');
         }
 
         if (!sessionId.includes('#')) {
-            return reply("❌ *Invalid format!* Session ID must contain the Mega key (abc#def123)");
+            return reply("❌ *Invalid format!* Session ID must be like: abc#def123");
         }
 
         const msg = await conn.sendMessage(from, {
             text: '✞︎ *𝐃𝐄𝐏𝐋𝐎𝐘𝐈𝐍𝐆 𝐒𝐄𝐒𝐒𝐈𝐎𝐍...*'
         }, { quoted: mek });
 
-        // ✅ UNIQUE SESSION NAME
+        // unique session
         const sessionName = `popkid-${Date.now()}`;
 
-        // ✅ MULTI SESSION PATH
+        // multi-session directory
         const sessionPath = path.resolve(__dirname, '../sessions', sessionName);
         await fs.mkdir(sessionPath, { recursive: true });
 
         const [fileId, key] = sessionId.split('#');
         const file = File.fromURL(`https://mega.nz/file/${fileId}#${key}`);
 
-        const buffer = await new Promise((res, rej) => {
-            file.download((e, d) => e ? rej(e) : res(d));
+        // download creds
+        const buffer = await new Promise((resolve, reject) => {
+            file.download((err, data) => err ? reject(err) : resolve(data));
         });
 
-        // ✅ WRITE TO ISOLATED SESSION
         await fs.writeFile(path.join(sessionPath, 'creds.json'), buffer);
 
-        // ✅ START MULTI CLIENT LOADER (NOT index.js)
-        const startFilePath = path.resolve(process.cwd(), 'multi/startClient.js');
+        // ✅ FIXED PATH (ENOENT SOLVED)
+        const startFilePath = path.resolve(__dirname, '../multi/startClient.js');
 
+        // ensure file exists
         await fs.access(startFilePath);
 
+        // fork new bot instance
         fork(startFilePath, [], {
             env: {
                 ...process.env,
@@ -88,7 +93,7 @@ async (conn, mek, m, { from, text, isOwner, reply, sender }) => {
         await conn.sendMessage(from, { delete: msg.key });
 
     } catch (e) {
-        console.log(e);
+        console.error('[DEPLOY ERROR]', e);
         reply(`❌ *Deployment Error:* ${e.message}`);
     }
 });
