@@ -75,16 +75,16 @@ cmd({
       menu += `\n\n╭━━━━❮ *${monospace(category)}* ❯━⊷\n`;
       const sorted = commandsByCategory[category].sort();
       for (const cmdName of sorted) {
-        menu += `┃◇ ${monospace(prefix + cmdName)}\n`;
+        menu += `┃✞︎ ${monospace(prefix + cmdName)}\n`;
       }
       menu += `╰━━━━━━━━━━━━━━━━━⊷`;
     }
 
-    menu += `\n\n> *${config.BOT_NAME || 'POP KID-MD'}* © 𝟸𝟶𝟸𝟼 🇰🇪\n> *Powered by POPKID TECH*`;
+    menu += `\n\n> *${config.BOT_NAME || 'POP KID-MD'}* © 𝟸𝟶𝟸𝟼 🇰🇪\n> *ᴘᴏᴘᴋɪᴅ ᴘʀᴏᴊᴇᴄᴛs*`;
 
     // SEND MESSAGE
     await conn.sendMessage(from, {
-      image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg' },
+      image: { url: config.MENU_IMAGE_URL || 'https://i.ibb.co/FqWYm0X0/3e7f5a8619e4c0b28c053275c6d96453.jpg' },
       caption: menu,
       contextInfo: {
         mentionedJid: [sender],
@@ -93,7 +93,7 @@ cmd({
         externalAdReply: {
           title: 'POP KID-MD V2 ADVANCED',
           body: 'Powered by POPKID TECH',
-          thumbnailUrl: config.MENU_IMAGE_URL || 'https://files.catbox.moe/kiy0hl.jpg',
+          thumbnailUrl: config.MENU_IMAGE_URL || 'https://i.ibb.co/FqWYm0X0/3e7f5a8619e4c0b28c053275c6d96453.jpg',
           sourceUrl: 'https://whatsapp.com/channel/0029Vag99462UPBF93786o1X',
           mediaType: 1,
           renderLargerThumbnail: true
