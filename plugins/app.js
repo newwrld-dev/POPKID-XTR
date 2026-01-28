@@ -5,60 +5,50 @@ import config from '../config.cjs';
 
 const apk = async (m, Matrix) => {
   const prefix = config.PREFIX;
-  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
-  const text = m.body.slice(prefix.length + cmd.length).trim();
+  const body = m.body || "";
+  const cmd = body.startsWith(prefix) ? body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
+  const text = body.slice(prefix.length + cmd.length).trim();
 
   if (!['apk', 'aptoide'].includes(cmd)) return;
   if (!text) return Matrix.sendMessage(m.from, { text: `❌ Please provide an app name!\nUsage: ${prefix}${cmd} <app name>` }, { quoted: m });
 
   try {
-    const sanitizedQuery = text.trim().replace(/[^a-zA-Z0-9\s]/g, '');
-    const apiUrl = `http://ws75.aptoide.com/api/7/apps/search/query=${encodeURIComponent(sanitizedQuery)}/limit=1`;
-
-    const response = await axios.get(apiUrl);
+    // 1. Better search endpoint
+    const searchUrl = `https://api.aptoide.com/api/7/apps/search?query=${encodeURIComponent(text)}&limit=1`;
+    const response = await axios.get(searchUrl);
     const data = response.data;
 
-    if (!data || !data.list || !data.list.length) {
+    // Check if data exists and has the 'datalist' structure
+    const app = data.datalist?.list?.[0];
+
+    if (!app) {
       return Matrix.sendMessage(m.from, { text: `❌ No results found for "${text}"` }, { quoted: m });
     }
 
-    const app = data.list[0];
-    if (!app.link) {
-      return Matrix.sendMessage(m.from, { text: `❌ APK download link not available for "${app.name}"` }, { quoted: m });
-    }
+    // 2. Inform the user you found it (User feedback is key!)
+    await Matrix.sendMessage(m.from, { text: `📥 Downloading *${app.name}*... please wait.` }, { quoted: m });
 
-    // Fetch APK file
-    const apkResponse = await axios.get(app.link, { responseType: 'arraybuffer' });
+    // 3. Use the 'file' link from the response
+    const downloadUrl = app.file.path;
+    const apkResponse = await axios.get(downloadUrl, { responseType: 'arraybuffer' });
     const apkBuffer = Buffer.from(apkResponse.data);
 
-    // Optional: save temporarily
-    const tempFile = `./temp_${app.name.replace(/\s/g, '_')}.apk`;
+    const tempFile = `./${app.package}_${Date.now()}.apk`;
     await writeFile(tempFile, apkBuffer);
 
-    // Send as file
+    // 4. Send Document
     await Matrix.sendMessage(m.from, {
       document: fs.readFileSync(tempFile),
       mimetype: 'application/vnd.android.package-archive',
       fileName: `${app.name}.apk`,
-      caption: `📱 *App Name:* ${app.name}\n📥 *Downloads:* ${app.downloads || 'N/A'}\n⭐ *Rating:* ${app.star || 'N/A'}\n📝 *Description:* ${app.description || 'No description available'}`,
-      contextInfo: {
-        mentionedJid: [m.sender],
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: '120363289379419860@newsletter',
-          newsletterName: "POPKID-XMD",
-          serverMessageId: 200
-        }
-      }
+      caption: `📱 *App:* ${app.name}\n📦 *Package:* ${app.package}\n⚖️ *Size:* ${(app.size / 1024 / 1024).toFixed(2)} MB`,
     }, { quoted: m });
 
-    // Clean up temp file
     await unlink(tempFile);
 
   } catch (err) {
-    console.error(err);
-    await Matrix.sendMessage(m.from, { text: `❌ Error fetching APK for "${text}"` }, { quoted: m });
+    console.error("APK Error:", err.message);
+    await Matrix.sendMessage(m.from, { text: `❌ Error: Could not process the request for "${text}".` }, { quoted: m });
   }
 };
 
