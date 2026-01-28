@@ -9,8 +9,8 @@ const setpp = async (m, sock) => {
 
     if (cmd !== 'setpp') return;
 
-    // MUST REPLY TO IMAGE
-    if (!m.quoted) {
+    // MUST REPLY TO SOMETHING
+    if (!m.quoted || !m.quoted.message) {
       return sock.sendMessage(
         m.from,
         { text: "❌ Reply to an image." },
@@ -18,9 +18,13 @@ const setpp = async (m, sock) => {
       );
     }
 
-    // IMAGE CHECK
-    const mime = m.quoted.mimetype || '';
-    if (!mime.startsWith('image/')) {
+    // IMAGE DETECTION (FIXED)
+    const quotedMsg = m.quoted.message;
+    const isImage =
+      quotedMsg.imageMessage ||
+      quotedMsg.viewOnceMessage?.message?.imageMessage;
+
+    if (!isImage) {
       return sock.sendMessage(
         m.from,
         { text: "❌ Only images are supported." },
@@ -33,13 +37,13 @@ const setpp = async (m, sock) => {
       react: { text: "⏳", key: m.key }
     });
 
-    // DOWNLOAD IMAGE
+    // DOWNLOAD IMAGE (BAILEYS SAFE)
     const buffer = await m.quoted.download();
 
     // UPDATE BOT PROFILE PICTURE
     await sock.updateProfilePicture(sock.user.id, buffer);
 
-    // SUCCESS MESSAGE
+    // SUCCESS
     await sock.sendMessage(
       m.from,
       {
