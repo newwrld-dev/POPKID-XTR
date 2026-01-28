@@ -1,4 +1,4 @@
-import config from '../../config.cjs';
+import config from '../config.cjs';
 
 const setpp = async (m, sock) => {
   try {
@@ -10,24 +10,21 @@ const setpp = async (m, sock) => {
     if (cmd !== 'setpp') return;
 
     // OWNER CHECK
-    const ownerNumber = config.OWNER_NUMBER; // e.g ["2547xxxxxxx"]
-    const senderNumber = m.sender.split('@')[0];
-    const isOwner = ownerNumber.includes(senderNumber);
-
-    if (!isOwner) {
+    const owners = config.OWNER_NUMBER; // ["2547xxxxxxx"]
+    const sender = m.sender.split('@')[0];
+    if (!owners.includes(sender)) {
       return sock.sendMessage(m.from, { text: "❌ Owner only command." }, { quoted: m });
     }
 
-    // CHECK QUOTED MESSAGE
+    // MUST REPLY TO IMAGE
     if (!m.quoted) {
       return sock.sendMessage(
         m.from,
-        { text: "❌ Please reply to an *image*." },
+        { text: "❌ Reply to an image." },
         { quoted: m }
       );
     }
 
-    // CHECK IMAGE TYPE
     const mime = m.quoted.mimetype || '';
     if (!mime.startsWith('image/')) {
       return sock.sendMessage(
@@ -37,7 +34,7 @@ const setpp = async (m, sock) => {
       );
     }
 
-    // REACT LOADING
+    // LOADING REACTION
     await sock.sendMessage(m.from, {
       react: { text: "⏳", key: m.key }
     });
@@ -45,15 +42,14 @@ const setpp = async (m, sock) => {
     // DOWNLOAD IMAGE
     const buffer = await m.quoted.download();
 
-    // UPDATE PROFILE PICTURE
-    const botJid = sock.user.id; // bot's JID
-    await sock.updateProfilePicture(botJid, buffer);
+    // UPDATE BOT PROFILE PIC
+    await sock.updateProfilePicture(sock.user.id, buffer);
 
-    // SUCCESS
+    // SUCCESS MESSAGE
     await sock.sendMessage(
       m.from,
       {
-        text: "✅ *Profile picture updated successfully!*",
+        text: "✅ *Bot profile picture updated successfully!*",
         contextInfo: {
           forwardingScore: 999,
           isForwarded: true,
@@ -76,7 +72,7 @@ const setpp = async (m, sock) => {
 
     await sock.sendMessage(
       m.from,
-      { text: "❌ Error while updating profile picture." },
+      { text: "❌ Failed to update profile picture." },
       { quoted: m }
     );
   }
