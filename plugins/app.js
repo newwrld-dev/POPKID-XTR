@@ -1,6 +1,7 @@
 import axios from 'axios';
 import config from '../config.cjs';
 
+// Helper to prevent WhatsApp rate-limit bans
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 const apk = async (m, Matrix) => {
@@ -15,16 +16,16 @@ const apk = async (m, Matrix) => {
     return Matrix.sendMessage(m.from, { text: "❌ *Please provide an app name to search.*" }, { quoted: m });
   }
 
-  // Start the reaction (User Feedback)
+  // 1. Initial Reaction
   await Matrix.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
 
   try {
-    // Using the more reliable Aptoide API v7 endpoint
-    const searchUrl = `https://api.aptoide.com/api/7/apps/search?query=${encodeURIComponent(text)}&limit=1`;
-    const response = await axios.get(searchUrl);
+    // Correct API Endpoint from your screenshot
+    const apiUrl = `https://ws75.aptoide.com/api/7/apps/search/query=${encodeURIComponent(text)}/limit=1`;
+    const response = await axios.get(apiUrl);
     const data = response.data;
 
-    // Correcting the path to access the app data
+    // Fixed path: API returns 'datalist.list'
     const app = data.datalist?.list?.[0];
 
     if (!app) {
@@ -34,7 +35,6 @@ const apk = async (m, Matrix) => {
 
     const appSize = (app.size / 1048576).toFixed(2); // Convert bytes to MB
 
-    // Your Compact and Attractive Box
     const box = `
 ╭─────⟪ *APK Downloader* ⟫─
 ┃ 📦 *Name:* ${app.name}
@@ -44,27 +44,27 @@ const apk = async (m, Matrix) => {
 ╰─────────────────────
 🔗 *Powered By Popkid*`;
 
-    // Send the information box
+    // 2. Send Info Box
     await Matrix.sendMessage(m.from, { text: box }, { quoted: m });
 
-    // 1.5 second delay to prevent 'rate-overlimit' before sending heavy file
-    await delay(1500);
+    // 3. Prevent 'rate-overlimit' with a small pause
+    await delay(2000);
 
-    // Send the APK file directly from the URL (Saves Disk Space)
+    // 4. Send the APK file using the direct path from the API
     await Matrix.sendMessage(m.from, {
-      document: { url: app.file.path }, // Using path for direct download
+      document: { url: app.file.path }, // Using path directly avoids disk usage issues
       fileName: `${app.name}.apk`,
       mimetype: "application/vnd.android.package-archive",
-      caption: `*${app.name}* successfully downloaded.`
+      caption: `✅ *${app.name}* is ready!`
     }, { quoted: m });
 
-    // Final success reaction
+    // 5. Success Reaction
     await Matrix.sendMessage(m.from, { react: { text: "✅", key: m.key } });
 
   } catch (err) {
     console.error("APK Error:", err.message);
     await Matrix.sendMessage(m.from, { react: { text: "❌", key: m.key } });
-    await Matrix.sendMessage(m.from, { text: "❌ *Error:* Could not process your request." }, { quoted: m });
+    await Matrix.sendMessage(m.from, { text: `❌ *Error:* ${err.message}` }, { quoted: m });
   }
 };
 
