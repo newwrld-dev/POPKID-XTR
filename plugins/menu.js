@@ -6,253 +6,176 @@ const { generateWAMessageFromContent, proto } = pkg;
 import config from '../config.cjs';
 import axios from 'axios';
 
-// Get total memory and free memory in bytes
-const totalMemoryBytes = os.totalmem();
-const freeMemoryBytes = os.freemem();
+// Professional Byte Converter
+const formatBytes = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
 
-// Define unit conversions
-const byteToKB = 1 / 1024;
-const byteToMB = byteToKB / 1024;
-const byteToGB = byteToMB / 1024;
-
-// Function to format bytes to a human-readable format
-function formatBytes(bytes) {
-  if (bytes >= Math.pow(1024, 3)) {
-    return (bytes * byteToGB).toFixed(2) + ' GB';
-  } else if (bytes >= Math.pow(1024, 2)) {
-    return (bytes * byteToMB).toFixed(2) + ' MB';
-  } else if (bytes >= 1024) {
-    return (bytes * byteToKB).toFixed(2) + ' KB';
-  } else {
-    return bytes.toFixed(2) + ' bytes';
-  }
-}
-
-// Bot Process Time
-const uptime = process.uptime();
-const day = Math.floor(uptime / (24 * 3600)); // Calculate days
-const hours = Math.floor((uptime % (24 * 3600)) / 3600); // Calculate hours
-const minutes = Math.floor((uptime % 3600) / 60); // Calculate minutes
-const seconds = Math.floor(uptime % 60); // Calculate seconds
-
-// Uptime
-const uptimeMessage = `*I am alive now since ${day}d ${hours}h ${minutes}m ${seconds}s*`;
-const runMessage = `*☀️ ${day} Day*\n*🕐 ${hours} Hour*\n*⏰ ${minutes} Minutes*\n*⏱️ ${seconds} Seconds*\n`;
-
-const xtime = moment.tz("Asia/Colombo").format("HH:mm:ss");
-const xdate = moment.tz("Asia/Colombo").format("DD/MM/YYYY");
-const time2 = moment().tz("Asia/Colombo").format("HH:mm:ss");
-let pushwish = "";
-
-if (time2 < "05:00:00") {
-  pushwish = `Good Morning 🌄`;
-} else if (time2 < "11:00:00") {
-  pushwish = `Good Morning 🌄`;
-} else if (time2 < "15:00:00") {
-  pushwish = `Good Afternoon 🌅`;
-} else if (time2 < "18:00:00") {
-  pushwish = `Good Evening 🌃`;
-} else if (time2 < "19:00:00") {
-  pushwish = `Good Evening 🌃`;
-} else {
-  pushwish = `Good Night 🌌`;
-}
+// Advanced Runtime Formatter
+const runtime = (seconds) => {
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor(seconds % (3600 * 24) / 3600);
+    const m = Math.floor(seconds % 3600 / 60);
+    const s = Math.floor(seconds % 60);
+    return `${d}d ${h}h ${m}m ${s}s`;
+};
 
 const menu = async (m, Matrix) => {
-  const prefix = config.PREFIX;
-  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
-  const mode = config.MODE === 'public' ? 'public' : 'private';
-  const pref = config.PREFIX;
+    const { PREFIX, BOT_NAME, OWNER_NAME, MODE, MENU_IMAGE } = config;
+    const cmd = m.body.startsWith(PREFIX) ? m.body.slice(PREFIX.length).split(' ')[0].toLowerCase() : '';
+    
+    // Time & Status Setup
+    const time = moment.tz("Asia/Colombo").format("HH:mm:ss");
+    const date = moment.tz("Asia/Colombo").format("DD/MM/YYYY");
+    const hour = moment().tz("Asia/Colombo").hour();
+    let pushwish = hour < 12 ? "Good Morning 🌄" : hour < 17 ? "Good Afternoon 🌅" : hour < 21 ? "Good Evening 🌃" : "Good Night 🌌";
 
-  const validCommands = ['list', 'help', 'menu'];
+    const validCommands = ['list', 'help', 'menu'];
 
-  if (validCommands.includes(cmd)) {
-    const mainMenu = `
-╭━━━〔 *${config.BOT_NAME}* 〕━━━┈⊷
-┃★╭──────────────
-┃★│ Owner : *${config.OWNER_NAME}*
-┃★│ User : *${m.pushName}*
-┃★│ Baileys : *Multi Device*
-┃★│ Type : *NodeJs*
-┃★│ Mode : *${mode}*
-┃★│ Platform : *${os.platform()}*
-┃★│ Prefix : [${prefix}]
-┃★│ Version : *3.1.0*
-┃★╰──────────────
+    if (validCommands.includes(cmd)) {
+        const mainMenu = `
+✨ *ＨＥＬＬＯ, ${m.pushName.toUpperCase()}* ✨
+
+╭━━〔 *${BOT_NAME}* 〕━━┈⊷
+┃ 👤 *Owner:* ${OWNER_NAME}
+┃ 🔋 *RAM:* ${formatBytes(os.freemem())} / ${formatBytes(os.totalmem())}
+┃ 🕒 *Time:* ${time}
+┃ 📅 *Date:* ${date}
+┃ ⏳ *Uptime:* ${runtime(process.uptime())}
+┃ ⚙️ *Platform:* ${os.platform()}
+┃ 🔐 *Mode:* ${MODE}
+┃ 🏷️ *Prefix:* [ ${PREFIX} ]
 ╰━━━━━━━━━━━━━━━┈⊷
 
-> ${pushwish} *${m.pushName}*!
+> ${pushwish}! 
 
-╭━━〔 *Download Menu* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• apk
-┃◈┃• facebook
-┃◈┃• mediafire
-┃◈┃• pinterestdl
-┃◈┃• gitclone
-┃◈┃• gdrive
-┃◈┃• insta
-┃◈┃• ytmp3
-┃◈┃• ytmp4
-┃◈┃• play
-┃◈┃• song
-┃◈┃• video
-┃◈┃• ytmp3doc
-┃◈┃• ytmp4doc
-┃◈┃• tiktok
-┃◈└───────────┈⊷
-╰──────────────┈⊷
+╭━━〔 *DOWNLOADER* 〕━━┈⊷
+┃ ◈ apk
+┃ ◈ facebook
+┃ ◈ mediafire
+┃ ◈ pinterestdl
+┃ ◈ gitclone
+┃ ◈ gdrive
+┃ ◈ insta
+┃ ◈ ytmp3
+┃ ◈ ytmp4
+┃ ◈ play
+┃ ◈ song
+┃ ◈ video
+┃ ◈ tiktok
+╰━━━━━━━━━━━━━━━┈⊷
 
-╭━━〔 *Converter Menu* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• attp
-┃◈┃• attp2
-┃◈┃• attp3
-┃◈┃• ebinary
-┃◈┃• dbinary
-┃◈┃• emojimix
-┃◈┃• mp3
-┃◈└───────────┈⊷
-╰──────────────┈⊷
+╭━━〔 *CONVERTER* 〕━━┈⊷
+┃ ◈ attp
+┃ ◈ attp2
+┃ ◈ attp3
+┃ ◈ ebinary
+┃ ◈ dbinary
+┃ ◈ emojimix
+┃ ◈ mp3
+╰━━━━━━━━━━━━━━━┈⊷
 
-╭━━〔 *AI Menu* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• ai
-┃◈┃• bug
-┃◈┃• report
-┃◈┃• gpt
-┃◈┃• dalle
-┃◈┃• remini
-┃◈┃• gemini
-┃◈└───────────┈⊷
-╰──────────────┈⊷
+╭━━〔 *AI MODELS* 〕━━┈⊷
+┃ ◈ ai
+┃ ◈ gpt
+┃ ◈ dalle
+┃ ◈ remini
+┃ ◈ gemini
+┃ ◈ bug
+┃ ◈ report
+╰━━━━━━━━━━━━━━━┈⊷
 
-╭━━〔 *Tools Menu* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• calculator
-┃◈┃• tempmail
-┃◈┃• checkmail
-┃◈┃• trt
-┃◈┃• tts
-┃◈└───────────┈⊷
-╰──────────────┈⊷
+╭━━〔 *TOOLS* 〕━━┈⊷
+┃ ◈ calculator
+┃ ◈ tempmail
+┃ ◈ checkmail
+┃ ◈ trt
+┃ ◈ tts
+╰━━━━━━━━━━━━━━━┈⊷
 
-╭━━〔 *Group Menu* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• linkgroup
-┃◈┃• setppgc
-┃◈┃• setname
-┃◈┃• setdesc
-┃◈┃• group
-┃◈┃• gcsetting
-┃◈┃• welcome
-┃◈┃• add
-┃◈┃• kick
-┃◈┃• hidetag
-┃◈┃• tagall
-┃◈┃• antilink
-┃◈┃• antitoxic
-┃◈┃• promote
-┃◈┃• demote
-┃◈┃• getbio
-┃◈└───────────┈⊷
-╰──────────────┈⊷
+╭━━〔 *GROUP* 〕━━┈⊷
+┃ ◈ linkgroup
+┃ ◈ setppgc
+┃ ◈ setname
+┃ ◈ setdesc
+┃ ◈ group
+┃ ◈ gcsetting
+┃ ◈ welcome
+┃ ◈ add
+┃ ◈ kick
+┃ ◈ hidetag
+┃ ◈ tagall
+┃ ◈ antilink
+┃ ◈ promote
+┃ ◈ demote
+╰━━━━━━━━━━━━━━━┈⊷
 
-╭━━〔 *Search Menu* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• play
-┃◈┃• yts
-┃◈┃• imdb
-┃◈┃• google
-┃◈┃• gimage
-┃◈┃• pinterest
-┃◈┃• wallpaper
-┃◈┃• wikimedia
-┃◈┃• ytsearch
-┃◈┃• ringtone
-┃◈┃• lyrics
-┃◈└───────────┈⊷
-╰──────────────┈⊷
+╭━━〔 *SEARCH* 〕━━┈⊷
+┃ ◈ play
+┃ ◈ yts
+┃ ◈ imdb
+┃ ◈ google
+┃ ◈ gimage
+┃ ◈ pinterest
+┃ ◈ wallpaper
+┃ ◈ ringtone
+┃ ◈ lyrics
+╰━━━━━━━━━━━━━━━┈⊷
 
-╭━━〔 *Main Menu* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• ping
-┃◈┃• alive
-┃◈┃• owner
-┃◈┃• menu
-┃◈┃• infobot
-┃◈└───────────┈⊷
-╰──────────────┈⊷
+╭━━〔 *OWNER* 〕━━┈⊷
+┃ ◈ join
+┃ ◈ leave
+┃ ◈ block
+┃ ◈ unblock
+┃ ◈ setppbot
+┃ ◈ anticall
+┃ ◈ setstatus
+┃ ◈ autotyping
+┃ ◈ autoread
+╰━━━━━━━━━━━━━━━┈⊷
 
-╭━━〔 *Owner Menu* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• join
-┃◈┃• leave
-┃◈┃• block
-┃◈┃• unblock
-┃◈┃• setppbot
-┃◈┃• anticall
-┃◈┃• setstatus
-┃◈┃• setnamebot
-┃◈┃• autotyping
-┃◈┃• alwaysonline
-┃◈┃• autoread
-┃◈┃• autosview
-┃◈└───────────┈⊷
-╰──────────────┈⊷
-
-╭━━〔 *Stalk Menu* 〕━━┈⊷
-┃◈╭─────────────·๏
-┃◈┃• truecaller
-┃◈┃• instastalk
-┃◈┃• githubstalk
-┃◈└───────────┈⊷
-╰──────────────┈⊷
-
-> *Use ${prefix} followed by the command name*
+   *© 2026 ${BOT_NAME}*
 `;
 
-    // Function to get menu image
-    const getMenuImage = async () => {
-      if (config.MENU_IMAGE && config.MENU_IMAGE.trim() !== '') {
-        try {
-          const response = await axios.get(config.MENU_IMAGE, { responseType: 'arraybuffer' });
-          return Buffer.from(response.data, 'binary');
-        } catch (error) {
-          console.error('Error fetching menu image from URL, falling back to local image:', error);
-          return fs.readFileSync('./media/zenor.jpeg');
-        }
-      } else {
-        return fs.readFileSync('./media/zenor.jpeg');
-      }
-    };
+        const getMenuImage = async () => {
+            try {
+                if (MENU_IMAGE) {
+                    const res = await axios.get(MENU_IMAGE, { responseType: 'arraybuffer' });
+                    return Buffer.from(res.data);
+                }
+                return fs.readFileSync('./media/zenor.jpeg');
+            } catch {
+                return fs.readFileSync('./media/zenor.jpeg');
+            }
+        };
 
-    const menuImage = await getMenuImage();
+        const image = await getMenuImage();
 
-    const sentMessage = await Matrix.sendMessage(m.from, {
-      image: menuImage,
-      caption: mainMenu,
-      contextInfo: {
-        mentionedJid: [m.sender],
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: '120363289379419860@newsletter',
-          newsletterName: "popkid Updates",
-          serverMessageId: 143
-        }
-      }
-    }, {
-      quoted: m
-    });
+        await Matrix.sendMessage(m.from, {
+            image: image,
+            caption: mainMenu,
+            contextInfo: {
+                mentionedJid: [m.sender],
+                forwardingScore: 999,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363289379419860@newsletter',
+                    newsletterName: "Popkid Updates",
+                    serverMessageId: 143
+                }
+            }
+        }, { quoted: m });
 
-    // Send audio after sending the menu
-    await Matrix.sendMessage(m.from, {
-      audio: { url: 'https://github.com/XdTechPro/KHAN-DATA/raw/refs/heads/main/autovoice/menunew.m4a' },
-      mimetype: 'audio/mp4',
-      ptt: true
-    }, { quoted: m });
-  }
+        await Matrix.sendMessage(m.from, {
+            audio: { url: 'https://github.com/XdTechPro/KHAN-DATA/raw/refs/heads/main/autovoice/menunew.m4a' },
+            mimetype: 'audio/mp4',
+            ptt: true
+        }, { quoted: m });
+    }
 };
 
 export default menu;
