@@ -1,70 +1,40 @@
 import config from '../../config.cjs';
 import moment from 'moment-timezone';
 
-const LogoCmd = async (message, socket) => {
+const LogoCmd = async (m, Matrix) => {
     const prefix = config.PREFIX;
-    const userName = message.pushName || "User";
-    const body = message.body || '';
+    const userName = m.pushName || "User";
+    const body = m.body || '';
     
     // Determine the command used
-    const command = body.startsWith(prefix) 
+    const cmd = body.startsWith(prefix) 
         ? body.slice(prefix.length).split(" ")[0].toLowerCase() 
         : '';
 
-    // Invisible character padding for message styling
-    const readMore = String.fromCharCode(8206).repeat(4001);
-
-    // Helper: Format uptime from seconds to h m s
-    const formatUptime = (seconds) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor(seconds % 3600 / 60);
-        const s = Math.floor(seconds % 60);
-        return `${h}h ${m}m ${s}s`;
-    };
-
-    // Helper: Get greeting based on time of day
-    const getGreeting = () => {
-        const hour = moment().tz("Africa/Dar_es_Salaam").hour();
-        if (hour < 12) return "🌄 Good Morning";
-        if (hour < 17) return "☀️ Good Afternoon";
-        if (hour < 20) return "🌇 Good Evening";
-        return "🌙 Good Night";
-    };
-
-    const uptime = formatUptime(process.uptime());
-    const greeting = getGreeting();
-
-    // Helper: Error messaging with ad-reply context
-    const sendError = async (text) => {
-        const adContext = {
-            text: text,
-            contextInfo: {
-                isForwarded: true,
-                forwardingScore: 999,
-                forwardedNewsletterMessageInfo: {
-                    newsletterJid: "120363289379419860@newsletter",
-                    newsletterName: "popkidxmd",
-                    serverMessageId: -1
-                },
-                externalAdReply: {
-                    title: "popkid",
-                    body: "popkidxmd",
-                    thumbnailUrl: "https://files.catbox.moe/yr339d.jpg",
-                    sourceUrl: "https://whatsapp.com/channel/0029VacgxK96hENmSRMRxx1r",
-                    mediaType: 1,
-                    renderLargerThumbnail: true
-                }
-            }
-        };
-        await socket.sendMessage(message.from, adContext, { quoted: message });
-    };
-
-    if (command === "menu") {
+    // Only respond if the command is menu or help
+    if (cmd === "menu" || cmd === "help") {
         try {
             // Reaction: Loading
-            await socket.sendMessage(message.from, {
-                react: { text: '⏳', key: message.key }
+            await Matrix.sendMessage(m.from, {
+                react: { text: '⏳', key: m.key }
             });
+
+            // Invisible character padding for message styling
+            const readMore = String.fromCharCode(8206).repeat(4001);
+
+            // Helper: Format uptime
+            const uptimeSec = process.uptime();
+            const h = Math.floor(uptimeSec / 3600);
+            const m_ = Math.floor(uptimeSec % 3600 / 60);
+            const s = Math.floor(uptimeSec % 60);
+            const uptime = `${h}h ${m_}m ${s}s`;
+
+            // Helper: Get greeting
+            const hour = moment().tz("Africa/Dar_es_Salaam").hour();
+            let greeting = "🌙 Good Night";
+            if (hour < 12) greeting = "🌄 Good Morning";
+            else if (hour < 17) greeting = "☀️ Good Afternoon";
+            else if (hour < 20) greeting = "🌇 Good Evening";
 
             // Build Menu String
             const menuText = `
@@ -77,7 +47,7 @@ const LogoCmd = async (message, socket) => {
 │ mode: ${config.MODE}
 │ prefix: ${prefix}
 │ uptime: ${uptime}
-│ theme: joelXtech
+│ theme: popkidxmd
 ╰─┬────❍${readMore}
 ╭─┴❍「 ɢᴇɴᴇʀᴀʟ 」❍
 │${prefix} ping
@@ -112,13 +82,8 @@ const LogoCmd = async (message, socket) => {
 │${prefix} profile
 │${prefix} sapk
 │${prefix} url
-│${prefix} url2
 │${prefix} tourl
-│${prefix} support
-│${prefix} inc
-│${prefix} i
 │${prefix} app
-│${prefix} appsearch
 │${prefix} playstore
 ╰─┬────❍
 ╭─┴❍「 ᴄᴏɴᴠᴇʀᴛᴇʀꜱ 」❍
@@ -129,12 +94,8 @@ const LogoCmd = async (message, socket) => {
 ╰─┬────❍
 ╭─┴❍「 ɢᴀᴍᴇꜱ+ꜰᴜɴ 」❍
 │${prefix} ttt
-│${prefix} resetttt
 │${prefix} wcg
-│${prefix} resetwcg
 │${prefix} connect4
-│${prefix} resetc4
-│${prefix} score
 │${prefix} joke
 │${prefix} advice
 │${prefix} meme
@@ -162,13 +123,11 @@ const LogoCmd = async (message, socket) => {
 ╰─┬────❍
 ╭─┴❍「 ʀᴇʟɪɢɪᴏɴ 」❍
 │${prefix} bible
-│${prefix} biblebooks
 │${prefix} surahmenu
 │${prefix} quranvid
 │${prefix} qvid
 │${prefix} qimg
 │${prefix} surahaudio
-│${prefix} surahurdu
 │${prefix} asmaulhusna
 │${prefix} prophetname
 ╰─┬────❍
@@ -177,157 +136,76 @@ const LogoCmd = async (message, socket) => {
 │${prefix} setppg
 │${prefix} setname
 │${prefix} setdesc
-│${prefix} group
 │${prefix} groupinfo
 │${prefix} welcome
 │${prefix} kick
-│${prefix} kickall
 │${prefix} add
 │${prefix} promote
 │${prefix} demote
-│${prefix} pick
 │${prefix} tagall
-│${prefix} tagadmin
-│${prefix} tagnotadmin
 │${prefix} hidetag
 │${prefix} antilink
-│${prefix} antisticker
 │${prefix} antibot
-│${prefix} antileft
-│${prefix} gcsetting
-│${prefix} vcf
 │${prefix} poll
-│${prefix} getbio
 ╰─┬────❍
 ╭─┴❍「 ꜱᴛᴀʟᴋᴇʀ ᴛᴏᴏʟꜱ 」❍
 │${prefix} truecaller
 │${prefix} instastalk
 │${prefix} tiktokstalk
 │${prefix} githubstalk
-│${prefix} npmstalk
 ╰─┬────❍
 ╭─┴❍「 ᴡᴀʟʟᴘᴀᴘᴇʀꜱ 」❍
 │${prefix} anime
-│${prefix} uchicha
 │${prefix} naruto
 │${prefix} sasuke
-│${prefix} abstract
 │${prefix} random
 ╰─┬────❍
-╭─┴❍「 ʜᴇɴᴛᴀɪ 」❍
+╭─┴❍「 ʜᴇɴᴛᴀɪ/ɴꜱꜰᴡ 」❍
 │${prefix} hwaifu
-│${prefix} trap
 │${prefix} blowjob
 │${prefix} neko
-│${prefix} hneko
-╰─┬────❍
-╭─┴❍「 ᴡᴀɪғᴜ 」❍
-│${prefix} neko
-│${prefix} couplepp
-│${prefix} cosplay
-│${prefix} megumin
-│${prefix} shinobu
+│${prefix} milf
+│${prefix} pussy
+│${prefix} yuri
 ╰─┬────❍
 ╭─┴❍「 ʀᴇᴀᴄᴛɪᴏɴꜱ 」❍
 │${prefix} highfive
-│${prefix} glomp
 │${prefix} handhold
-│${prefix} shinobu
 │${prefix} cuddle
-│${prefix} cringe
-│${prefix} sad
 │${prefix} happy
 │${prefix} dance
-│${prefix} smug
-│${prefix} blush
-│${prefix} awo
-│${prefix} wave
 │${prefix} smile
-╰─┬────❍
-╭─┴❍「 ᴘᴏᴋᴇɴᴏᴍ 」❍
-│${prefix} pokemon
-│${prefix} wallet
-│${prefix} buy
-│${prefix} winmoney
+│${prefix} blush
 ╰─┬────❍
 ╭─┴❍「 ᴀᴜᴅɪᴏ ᴇᴅɪᴛ 」❍
 │${prefix} say
-│${prefix} tts
 │${prefix} bass
-│${prefix} blowin
 │${prefix} deep
 │${prefix} earrape
 │${prefix} fast
-│${prefix} fat
-│${prefix} nighttime
-│${prefix} reverse
 │${prefix} robot
 │${prefix} slow
 │${prefix} smooth
-│${prefix} typai
 ╰─┬────❍
 ╭─┴❍「 ʟᴏɢᴏ ᴍᴀᴋᴇʀ 」❍
 │${prefix} logo
-│${prefix} logo1
-│${prefix} logo2
-│${prefix} logo3
-│${prefix} logo4
-│${prefix} logo5
-│${prefix} logo6
-│${prefix} logo7
-│${prefix} logo8
-│${prefix} logo9
-│${prefix} logo10
-│${prefix} logo11
-│${prefix} logo12
-│${prefix} logo13
-│${prefix} logo14
-│${prefix} logo15
-│${prefix} logo16
-│${prefix} logo17
-│${prefix} logo18
-│${prefix} logo19
+│${prefix} gfx
+│${prefix} carbon
 ╰─┬────❍
 ╭─┴❍「 ᴏᴡɴᴇʀ ᴘᴀɴᴇʟ 」❍
-│${prefix} send
-│${prefix} vv
-│${prefix} vv1
-│${prefix} vv2
-│${prefix} vv3
 │${prefix} restart
 │${prefix} update
-│${prefix} pair
-│${prefix} forward
-│${prefix} getall
+│${prefix} block
+│${prefix} unblock
 │${prefix} jid
 │${prefix} join
 │${prefix} leave
-│${prefix} block
-│${prefix} unblock
-│${prefix} allcmds
-│${prefix} anticall
 │${prefix} setstatus
 │${prefix} autobio
-│${prefix} autotyping
-│${prefix} alwaysonline
-│${prefix} autoread
-│${prefix} autosview
-│${prefix} allvar
-│${prefix} antidelete
-│${prefix} addpremium
-╰─┬────❍
-╭─┴❍「 ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀꜱ 」❍
-│${prefix} hentaivid
-│${prefix} xnx
-│${prefix} xxvideo
 ╰─┬────❍
 ╭─┴❍「 ᴇᴄᴏɴᴏᴍʏ 」❍
-│${prefix} economy
 │${prefix} balance
 │${prefix} daily
-│${prefix} leaderboard
-│${prefix} earn
-│${prefix} spend
 │${prefix} deposit
 │${prefix} withdraw
 │${prefix} transfer
@@ -335,109 +213,10 @@ const LogoCmd = async (message, socket) => {
 ╭─┴❍「 ᴘʀᴇᴍɪᴜᴍ ʙᴜɢꜱ 」❍
 │${prefix} bugmenu
 │${prefix} docbug
-│${prefix} lockcrash
 │${prefix} amountbug
-│${prefix} pmbug
-│${prefix} delbug
-│${prefix} trollbug
-│${prefix} docubug
-│${prefix} unlimitedbug
-│${prefix} bombbug
-│${prefix} lagbug
 │${prefix} gcbug
-│${prefix} delgcbug
-│${prefix} trollgcbug
-│${prefix} labug
-│${prefix} bombgcbug
-│${prefix} unlimitedgcbug
-│${prefix} docugcbug
-╰─┬────❍
-╭─┴❍「 ᴀɴɪᴍᴇ 」❍
-│${prefix} neko
-│${prefix} husbu
-│${prefix} lol
-│${prefix} shota
-│${prefix} waifu
-╰─┬────❍
-╭─┴❍「 ɴꜱꜰᴡ 」❍
-│${prefix} blowjob
-│${prefix} cuckold
-│${prefix} eba
-│${prefix} foot
-│${prefix} milf
-│${prefix} pussy
-│${prefix} yuri
-│${prefix} zettai
-╰─┬────❍
-╭─┴❍「 ᴛɪᴋᴛᴏᴋ ᴘɪᴄꜱ 」❍
-│${prefix} china
-│${prefix} hijabu
-│${prefix} indonesia
-│${prefix} japan
-│${prefix} korea
-│${prefix} malaysia
-│${prefix} thailand
-│${prefix} vietnam
-╰─┬────❍
-╭─┴──❍「 ᴛɪᴋᴛᴏᴋ ᴠɪᴅᴇᴏ 」❍
-│${prefix} bocil
-│${prefix} gheayub
-│${prefix} kayes
-│${prefix} notnot
-│${prefix} panrika
-│${prefix} santuy
-│${prefix} tiktokgirl
-│${prefix} ukihty
-╰─┬────❍
-╭─┴❍「 ʀᴀɴᴅᴏᴍ ᴘɪᴄ 」❍
-│${prefix} aesthetic
-│${prefix} antiwork
-│${prefix} bike
-│${prefix} blackpink
-│${prefix} boneka
-│${prefix} car
-│${prefix} cat
-│${prefix} cosplay
-│${prefix} dogo
-│${prefix} justina
-│${prefix} kayes
-│${prefix} kpop
-│${prefix} notnot
-│${prefix} ppcouple
-│${prefix} profile
-│${prefix} pubg
-│${prefix} rose
-│${prefix} ryujin
-│${prefix} wallhp
-│${prefix} wallml
-│${prefix} ulzzangboy
-│${prefix} ulizzanggirl
-╰─┬────❍
-╭─┴❍「 ɪᴍᴀɢᴇ ᴇꜰꜰᴇᴄᴛꜱ 」❍
-│${prefix} wanted
-│${prefix} ad
-│${prefix} beautiful
-│${prefix} blur
-│${prefix} rip
-│${prefix} jail
-│${prefix} crown
-╰─┬────❍
-╭─┴❍「 ɢғx ᴍᴀᴋᴇʀ 」❍
-│${prefix} carbon
-│${prefix} gfx
-│${prefix} gfx1
-│${prefix} gfx2
-│${prefix} gfx3
-│${prefix} gfx4
-│${prefix} gfx5
-│${prefix} gfx6
-│${prefix} gfx7
-│${prefix} gfx8
-│${prefix} gfx9
-│${prefix} gfx10
-│${prefix} gfx11
 ╰─────────────❍
-ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʟᴏʀᴅ ᴊᴏᴇʟ
+ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘᴏᴘᴋɪᴅ xᴍᴅ
 `;
 
             // Message Configuration
@@ -445,6 +224,7 @@ const LogoCmd = async (message, socket) => {
                 image: { url: "https://files.catbox.moe/yr339d.jpg" },
                 caption: menuText,
                 contextInfo: {
+                    mentionedJid: [m.sender],
                     isForwarded: true,
                     forwardingScore: 999,
                     forwardedNewsletterMessageInfo: {
@@ -453,8 +233,8 @@ const LogoCmd = async (message, socket) => {
                         serverMessageId: -1
                     },
                     externalAdReply: {
-                        title: "popkid",
-                        body: "popkidxmd",
+                        title: "ᴘᴏᴘᴋɪᴅ xᴍᴅ",
+                        body: "ᴀᴜᴛʜᴇɴᴛɪᴄ ʙᴏᴛ ᴇxᴘᴇʀɪᴇɴᴄᴇ",
                         thumbnailUrl: "https://files.catbox.moe/yr339d.jpg",
                         sourceUrl: "https://whatsapp.com/channel/0029VacgxK96hENmSRMRxx1r",
                         mediaType: 1,
@@ -463,16 +243,24 @@ const LogoCmd = async (message, socket) => {
                 }
             };
 
-            await socket.sendMessage(message.from, menuMessage, { quoted: message });
+            await Matrix.sendMessage(m.from, menuMessage, { quoted: m });
+
+            // Send Audio (Concept fix: send voice note with menu)
+            await Matrix.sendMessage(m.from, {
+                audio: { url: 'https://github.com/XdTechPro/KHAN-DATA/raw/refs/heads/main/autovoice/menunew.m4a' },
+                mimetype: 'audio/mp4',
+                ptt: true
+            }, { quoted: m });
 
             // Reaction: Success
-            await socket.sendMessage(message.from, {
-                react: { text: '✅', key: message.key }
+            await Matrix.sendMessage(m.from, {
+                react: { text: '✅', key: m.key }
             });
 
         } catch (err) {
             console.error(err);
-            await sendError("⚠️ An error occurred while sending the menu. Please try again later!");
+            // Fallback text if image fails
+            await Matrix.sendMessage(m.from, { text: "⚠️ Error: Menu could not be loaded." }, { quoted: m });
         }
     }
 };
