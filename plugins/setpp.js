@@ -9,13 +9,6 @@ const setpp = async (m, sock) => {
 
     if (cmd !== 'setpp') return;
 
-    // OWNER CHECK
-    const owners = config.OWNER_NUMBER; // ["2547xxxxxxx"]
-    const sender = m.sender.split('@')[0];
-    if (!owners.includes(sender)) {
-      return sock.sendMessage(m.from, { text: "❌ Owner only command." }, { quoted: m });
-    }
-
     // MUST REPLY TO IMAGE
     if (!m.quoted) {
       return sock.sendMessage(
@@ -25,6 +18,7 @@ const setpp = async (m, sock) => {
       );
     }
 
+    // IMAGE CHECK
     const mime = m.quoted.mimetype || '';
     if (!mime.startsWith('image/')) {
       return sock.sendMessage(
@@ -42,7 +36,7 @@ const setpp = async (m, sock) => {
     // DOWNLOAD IMAGE
     const buffer = await m.quoted.download();
 
-    // UPDATE BOT PROFILE PIC
+    // UPDATE BOT PROFILE PICTURE
     await sock.updateProfilePicture(sock.user.id, buffer);
 
     // SUCCESS MESSAGE
