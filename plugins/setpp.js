@@ -1,48 +1,85 @@
-import config from '../config.cjs';
+import config from '../../config.cjs';
 
-const setpp = async (m, Matrix) => {
+const setpp = async (m, sock) => {
+  try {
     const prefix = config.PREFIX;
-    const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
+    const cmd = m.body.startsWith(prefix)
+      ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
+      : '';
 
-    // Command patterns
-    if (!['setpp', 'setppbot', 'setdp'].includes(cmd)) return;
+    if (cmd !== 'setpp') return;
 
-    try {
-        // Owner Check (Using pushName or Jid as per your config style)
-        const botNumber = await Matrix.decodeJid(Matrix.user.id);
-        if (m.sender !== botNumber && !config.OWNER_NAME.includes(m.pushName)) {
-            return m.reply("❌ *Owner only command!*");
-        }
+    // OWNER CHECK
+    const ownerNumber = config.OWNER_NUMBER; // e.g ["2547xxxxxxx"]
+    const senderNumber = m.sender.split('@')[0];
+    const isOwner = ownerNumber.includes(senderNumber);
 
-        // Identify the image (from reply or direct message)
-        const quoted = m.quoted ? m.quoted : m;
-        const mime = (quoted.msg || quoted).mimetype || '';
-
-        if (!mime.startsWith('image')) {
-            return m.reply("❌ *Please reply to an image.*");
-        }
-
-        // React to indicate processing
-        await m.React("⏳");
-
-        // Download media buffer
-        const buffer = await quoted.download();
-
-        // Update Profile Picture
-        // We use Matrix.user.id for the bot's own profile
-        await Matrix.updateProfilePicture(botNumber, buffer);
-
-        // Success React and Message
-        await m.React("✅");
-        await Matrix.sendMessage(m.from, { 
-            text: "✅ *Bot profile picture updated successfully!*" 
-        }, { quoted: m });
-
-    } catch (err) {
-        console.error("Error updating DP:", err);
-        await m.React("❌");
-        m.reply("❌ *Failed to update DP:* " + err.message);
+    if (!isOwner) {
+      return sock.sendMessage(m.from, { text: "❌ Owner only command." }, { quoted: m });
     }
+
+    // CHECK QUOTED MESSAGE
+    if (!m.quoted) {
+      return sock.sendMessage(
+        m.from,
+        { text: "❌ Please reply to an *image*." },
+        { quoted: m }
+      );
+    }
+
+    // CHECK IMAGE TYPE
+    const mime = m.quoted.mimetype || '';
+    if (!mime.startsWith('image/')) {
+      return sock.sendMessage(
+        m.from,
+        { text: "❌ Only images are supported." },
+        { quoted: m }
+      );
+    }
+
+    // REACT LOADING
+    await sock.sendMessage(m.from, {
+      react: { text: "⏳", key: m.key }
+    });
+
+    // DOWNLOAD IMAGE
+    const buffer = await m.quoted.download();
+
+    // UPDATE PROFILE PICTURE
+    const botJid = sock.user.id; // bot's JID
+    await sock.updateProfilePicture(botJid, buffer);
+
+    // SUCCESS
+    await sock.sendMessage(
+      m.from,
+      {
+        text: "✅ *Profile picture updated successfully!*",
+        contextInfo: {
+          forwardingScore: 999,
+          isForwarded: true,
+          forwardedNewsletterMessageInfo: {
+            newsletterJid: "120363289379419860@newsletter",
+            newsletterName: "Popkid-Xmd",
+            serverMessageId: -1
+          }
+        }
+      },
+      { quoted: m }
+    );
+
+  } catch (err) {
+    console.error("SETPP ERROR:", err);
+
+    await sock.sendMessage(m.from, {
+      react: { text: "❌", key: m.key }
+    });
+
+    await sock.sendMessage(
+      m.from,
+      { text: "❌ Error while updating profile picture." },
+      { quoted: m }
+    );
+  }
 };
 
 export default setpp;
