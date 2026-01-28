@@ -1,9 +1,6 @@
 import axios from 'axios';
 import config from '../config.cjs';
 
-// Helper to prevent WhatsApp rate-limit bans
-const delay = ms => new Promise(res => setTimeout(res, ms));
-
 const apk = async (m, Matrix) => {
   const prefix = config.PREFIX;
   const body = m.body || "";
@@ -11,32 +8,28 @@ const apk = async (m, Matrix) => {
   const text = body.slice(prefix.length + cmd.length).trim();
 
   if (!['apk', 'aptoide'].includes(cmd)) return;
+  if (!text) return Matrix.sendMessage(m.from, { text: "❌ *Please provide an app name.*" }, { quoted: m });
 
-  if (!text) {
-    return Matrix.sendMessage(m.from, { text: "❌ *Please provide an app name to search.*" }, { quoted: m });
-  }
-
-  // 1. Initial Reaction
   await Matrix.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
 
   try {
-    // Correct API Endpoint from your screenshot
     const apiUrl = `https://ws75.aptoide.com/api/7/apps/search/query=${encodeURIComponent(text)}/limit=1`;
     const response = await axios.get(apiUrl);
-    const data = response.data;
-
-    // Fixed path: API returns 'datalist.list'
-    const app = data.datalist?.list?.[0];
+    const app = response.data?.datalist?.list?.[0];
 
     if (!app) {
       await Matrix.sendMessage(m.from, { react: { text: "❌", key: m.key } });
-      return Matrix.sendMessage(m.from, { text: "⚠️ *No results found for the given app name.*" }, { quoted: m });
+      return Matrix.sendMessage(m.from, { text: "⚠️ *No results found.*" }, { quoted: m });
     }
 
-    const appSize = (app.size / 1048576).toFixed(2); // Convert bytes to MB
+    const appSize = (app.size / 1048576).toFixed(2);
+    
+    // 100MB Safety Guard to prevent WhatsApp internal errors
+    if (parseFloat(appSize) > 150) {
+        return Matrix.sendMessage(m.from, { text: `❌ *File too large (${appSize}MB).* WhatsApp limit is 150MB.` }, { quoted: m });
+    }
 
-    const box = `
-╭─────⟪ *APK Downloader* ⟫─
+    const box = `╭─────⟪ *APK Downloader* ⟫─
 ┃ 📦 *Name:* ${app.name}
 ┃ 🏋 *Size:* ${appSize} MB
 ┃ 🏷 *Package:* ${app.package}
@@ -44,27 +37,21 @@ const apk = async (m, Matrix) => {
 ╰─────────────────────
 🔗 *Powered By Popkid*`;
 
-    // 2. Send Info Box
     await Matrix.sendMessage(m.from, { text: box }, { quoted: m });
 
-    // 3. Prevent 'rate-overlimit' with a small pause
-    await delay(2000);
-
-    // 4. Send the APK file using the direct path from the API
+    // CRITICAL: We send the URL directly. This prevents the "Out of Memory" crash.
     await Matrix.sendMessage(m.from, {
-      document: { url: app.file.path }, // Using path directly avoids disk usage issues
+      document: { url: app.file.path }, 
       fileName: `${app.name}.apk`,
       mimetype: "application/vnd.android.package-archive",
-      caption: `✅ *${app.name}* is ready!`
+      caption: `✅ *${app.name}* Downloaded Successfully.`
     }, { quoted: m });
 
-    // 5. Success Reaction
     await Matrix.sendMessage(m.from, { react: { text: "✅", key: m.key } });
 
   } catch (err) {
     console.error("APK Error:", err.message);
-    await Matrix.sendMessage(m.from, { react: { text: "❌", key: m.key } });
-    await Matrix.sendMessage(m.from, { text: `❌ *Error:* ${err.message}` }, { quoted: m });
+    await Matrix.sendMessage(m.from, { text: "❌ *Server Error:* Request was too heavy." }, { quoted: m });
   }
 };
 
