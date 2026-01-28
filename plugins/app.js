@@ -1,7 +1,7 @@
 import axios from 'axios';
-import fs from 'fs';
-import { writeFile, unlink } from 'fs/promises';
 import config from '../config.cjs';
+
+const delay = ms => new Promise(res => setTimeout(res, ms));
 
 const apk = async (m, Matrix) => {
   const prefix = config.PREFIX;
@@ -10,45 +10,61 @@ const apk = async (m, Matrix) => {
   const text = body.slice(prefix.length + cmd.length).trim();
 
   if (!['apk', 'aptoide'].includes(cmd)) return;
-  if (!text) return Matrix.sendMessage(m.from, { text: `❌ Please provide an app name!\nUsage: ${prefix}${cmd} <app name>` }, { quoted: m });
+
+  if (!text) {
+    return Matrix.sendMessage(m.from, { text: "❌ *Please provide an app name to search.*" }, { quoted: m });
+  }
+
+  // Start the reaction (User Feedback)
+  await Matrix.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
 
   try {
-    // 1. Better search endpoint
+    // Using the more reliable Aptoide API v7 endpoint
     const searchUrl = `https://api.aptoide.com/api/7/apps/search?query=${encodeURIComponent(text)}&limit=1`;
     const response = await axios.get(searchUrl);
     const data = response.data;
 
-    // Check if data exists and has the 'datalist' structure
+    // Correcting the path to access the app data
     const app = data.datalist?.list?.[0];
 
     if (!app) {
-      return Matrix.sendMessage(m.from, { text: `❌ No results found for "${text}"` }, { quoted: m });
+      await Matrix.sendMessage(m.from, { react: { text: "❌", key: m.key } });
+      return Matrix.sendMessage(m.from, { text: "⚠️ *No results found for the given app name.*" }, { quoted: m });
     }
 
-    // 2. Inform the user you found it (User feedback is key!)
-    await Matrix.sendMessage(m.from, { text: `📥 Downloading *${app.name}*... please wait.` }, { quoted: m });
+    const appSize = (app.size / 1048576).toFixed(2); // Convert bytes to MB
 
-    // 3. Use the 'file' link from the response
-    const downloadUrl = app.file.path;
-    const apkResponse = await axios.get(downloadUrl, { responseType: 'arraybuffer' });
-    const apkBuffer = Buffer.from(apkResponse.data);
+    // Your Compact and Attractive Box
+    const box = `
+╭─────⟪ *APK Downloader* ⟫─
+┃ 📦 *Name:* ${app.name}
+┃ 🏋 *Size:* ${appSize} MB
+┃ 🏷 *Package:* ${app.package}
+┃ 📅 *Updated:* ${app.updated}
+╰─────────────────────
+🔗 *Powered By Popkid*`;
 
-    const tempFile = `./${app.package}_${Date.now()}.apk`;
-    await writeFile(tempFile, apkBuffer);
+    // Send the information box
+    await Matrix.sendMessage(m.from, { text: box }, { quoted: m });
 
-    // 4. Send Document
+    // 1.5 second delay to prevent 'rate-overlimit' before sending heavy file
+    await delay(1500);
+
+    // Send the APK file directly from the URL (Saves Disk Space)
     await Matrix.sendMessage(m.from, {
-      document: fs.readFileSync(tempFile),
-      mimetype: 'application/vnd.android.package-archive',
+      document: { url: app.file.path }, // Using path for direct download
       fileName: `${app.name}.apk`,
-      caption: `📱 *App:* ${app.name}\n📦 *Package:* ${app.package}\n⚖️ *Size:* ${(app.size / 1024 / 1024).toFixed(2)} MB`,
+      mimetype: "application/vnd.android.package-archive",
+      caption: `*${app.name}* successfully downloaded.`
     }, { quoted: m });
 
-    await unlink(tempFile);
+    // Final success reaction
+    await Matrix.sendMessage(m.from, { react: { text: "✅", key: m.key } });
 
   } catch (err) {
     console.error("APK Error:", err.message);
-    await Matrix.sendMessage(m.from, { text: `❌ Error: Could not process the request for "${text}".` }, { quoted: m });
+    await Matrix.sendMessage(m.from, { react: { text: "❌", key: m.key } });
+    await Matrix.sendMessage(m.from, { text: "❌ *Error:* Could not process your request." }, { quoted: m });
   }
 };
 
