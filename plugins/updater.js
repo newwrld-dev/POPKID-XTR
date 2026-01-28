@@ -8,108 +8,117 @@ import config from '../config.cjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Constants for your Repository
 const REPO_OWNER = "newwrld-dev";
 const REPO_NAME = "POPKID-XTR";
-const GITHUB_API = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/main`;
-const ZIP_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/refs/heads/main.zip`;
+const BRANCH = "main";
 
 const update = async (m, Matrix) => {
     const prefix = config.PREFIX || '.';
     const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(" ")[0].toLowerCase() : "";
 
     if (cmd === "update") {
-        // Validation: Only Owner or Bot itself
+        // Owner Check
         const botNumber = await Matrix.decodeJid(Matrix.user.id);
         if (m.sender !== botNumber && !config.OWNER_NAME.includes(m.pushName)) {
-            return m.reply("❌ *This command is restricted to the Bot Owner.*");
+            return m.reply("❌ *Owner Only Command!*");
         }
 
-        await m.React("⏳");
+        await m.React("🆕");
 
         try {
-            const { key } = await Matrix.sendMessage(m.from, { text: "```🔍 Checking for updates...```" }, { quoted: m });
+            const { key } = await Matrix.sendMessage(m.from, { text: "🔍 Checking for updates..." }, { quoted: m });
 
-            const editMessage = async (newText) => {
-                await Matrix.sendMessage(m.from, { text: newText, edit: key });
-            };
+            // GitHub API Endpoints
+            const apiCommitUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits/${BRANCH}`;
+            const zipUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/${BRANCH}.zip`;
 
-            // 1. Check for updates
-            const { data: commitData } = await axios.get(GITHUB_API);
+            // Fetch latest commit info
+            const { data: commitData } = await axios.get(apiCommitUrl, { headers: { "User-Agent": "node.js" } });
             const latestCommitHash = commitData.sha;
 
-            const packageJsonPath = path.join(process.cwd(), "package.json");
-            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
-            const currentHash = packageJson.commitHash || "unknown";
+            // Commit Hash Persistence (Fallback File)
+            const commitFile = path.join(process.cwd(), ".last_update_commit");
+            const getCurrentHash = () => {
+                try { return fs.existsSync(commitFile) ? fs.readFileSync(commitFile, "utf8").trim() : "unknown"; } catch { return "unknown"; }
+            };
 
-            if (latestCommitHash === currentHash) {
+            if (getCurrentHash() === latestCommitHash) {
                 await m.React("✅");
-                return editMessage("```✅ Your bot is already on the latest version!```");
+                return Matrix.sendMessage(m.from, { text: "✅ *Bot is already on the latest version!*", edit: key });
             }
 
-            await editMessage("```🚀 New update detected! Downloading...```");
+            // Update details (as requested: popkid style)
+            const authorName = "popkid";
+            const authorEmail = "popkid@gmail.com";
+            const commitDate = new Date(commitData.commit.author.date).toLocaleString();
+            const commitMessage = commitData.commit.message || "No message provided";
 
-            // 2. Download ZIP
-            const zipPath = path.join(process.cwd(), "temp_update.zip");
-            const response = await axios({
-                method: 'get',
-                url: ZIP_URL,
-                responseType: 'arraybuffer'
+            await Matrix.sendMessage(m.from, {
+                text: `🧨 *Updating bot to latest commit*\n\n*Details:*\n👤 *Author:* ${authorName}\n📧 *Email:* ${authorEmail}\n📅 *Date:* ${commitDate}\n💬 *Message:* ${commitMessage}`,
+                edit: key
             });
-            fs.writeFileSync(zipPath, response.data);
 
-            await editMessage("```📦 Extracting files...```");
+            // Download ZIP
+            const zipPath = path.join(process.cwd(), `${REPO_NAME}-${BRANCH}.zip`);
+            const tmpExtract = path.join(process.cwd(), "latest_update_tmp");
 
-            // 3. Extracting
+            const zipRes = await axios.get(zipUrl, { responseType: "arraybuffer", headers: { "User-Agent": "node.js" } });
+            fs.writeFileSync(zipPath, zipRes.data);
+
+            // Extract
             const zip = new AdmZip(zipPath);
-            const extractPath = path.join(process.cwd(), "temp_extract");
-            zip.extractAllTo(extractPath, true);
+            zip.extractAllTo(tmpExtract, true);
 
-            await editMessage("```🔄 Applying changes...```");
+            const sourcePath = path.join(tmpExtract, `${REPO_NAME}-${BRANCH}`);
+            const destinationPath = process.cwd();
 
-            // The folder inside GitHub ZIPs is usually "REPO_NAME-main"
-            const sourcePath = path.join(extractPath, `${REPO_NAME}-main`);
-            
-            // 4. Copy Files (Skips config and sensitive data)
-            await copyFolderSync(sourcePath, process.cwd(), ['package.json', 'config.cjs', '.env', 'node_modules', '.git']);
+            // Copy Files while skipping sensitive/local data
+            copyFolderSync(sourcePath, destinationPath, [
+                "config.cjs",
+                "config.js",
+                "app.json",
+                ".env",
+                "session",
+                "session.json",
+                "node_modules",
+                ".git"
+            ]);
 
-            // 5. Update local hash in package.json
-            packageJson.commitHash = latestCommitHash;
-            fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+            // Save new hash
+            fs.writeFileSync(commitFile, latestCommitHash, "utf8");
 
             // Cleanup
             fs.unlinkSync(zipPath);
-            fs.rmSync(extractPath, { recursive: true, force: true });
+            fs.rmSync(tmpExtract, { recursive: true, force: true });
 
-            await editMessage("```✅ Update successful! Restarting to apply changes...```");
-            await m.React("✅");
+            await Matrix.sendMessage(m.from, { text: "✅ *Update complete! Restarting to apply changes...*" });
+            await m.React("🚀");
 
-            setTimeout(() => process.exit(0), 3000);
+            setTimeout(() => process.exit(0), 2000);
 
         } catch (error) {
-            console.error(error);
-            await m.React("❌");
+            console.error("Update error:", error);
             m.reply(`❌ *Update Failed:* ${error.message}`);
         }
     }
 };
 
-// Recursive function to copy updated files
-async function copyFolderSync(source, target, filesToSkip = []) {
+// Reusable Copy Helper
+function copyFolderSync(source, target, skipList = []) {
     if (!fs.existsSync(source)) return;
     if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
 
-    const items = fs.readdirSync(source);
-    for (const item of items) {
-        const srcPath = path.join(source, item);
-        const destPath = path.join(target, item);
+    for (const item of fs.readdirSync(source)) {
+        if (skipList.includes(item)) continue;
 
-        if (filesToSkip.includes(item)) continue;
+        const src = path.join(source, item);
+        const dest = path.join(target, item);
+        const stat = fs.lstatSync(src);
 
-        if (fs.lstatSync(srcPath).isDirectory()) {
-            await copyFolderSync(srcPath, destPath, filesToSkip);
+        if (stat.isDirectory()) {
+            copyFolderSync(src, dest, skipList);
         } else {
-            fs.copyFileSync(srcPath, destPath);
+            fs.copyFileSync(src, dest);
         }
     }
 }
