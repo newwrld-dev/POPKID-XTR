@@ -1,58 +1,65 @@
-import config from '../../config.cjs';
 import axios from 'axios';
+import fs from 'fs';
+import { writeFile, unlink } from 'fs/promises';
+import config from '../config.cjs';
 
-const apkDownloader = async (m, Matrix) => {
+const apk = async (m, Matrix) => {
   const prefix = config.PREFIX;
-  const body = m.body || '';
-  if (!body.startsWith(prefix)) return;
-  
-  const cmd = body.slice(prefix.length).split(' ')[0].toLowerCase();
-  const text = body.slice(prefix.length + cmd.length).trim();
+  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
+  const text = m.body.slice(prefix.length + cmd.length).trim();
 
-  if (cmd === "app" || cmd === "apk") {
-    if (!text) return Matrix.sendMessage(m.from, { text: `*❌ ǫᴜᴇʀʏ?*` }, { quoted: m });
+  if (!['apk', 'aptoide'].includes(cmd)) return;
+  if (!text) return Matrix.sendMessage(m.from, { text: `❌ Please provide an app name!\nUsage: ${prefix}${cmd} <app name>` }, { quoted: m });
 
-    await Matrix.sendMessage(m.from, { react: { text: "📥", key: m.key } });
+  try {
+    const sanitizedQuery = text.trim().replace(/[^a-zA-Z0-9\s]/g, '');
+    const apiUrl = `http://ws75.aptoide.com/api/7/apps/search/query=${encodeURIComponent(sanitizedQuery)}/limit=1`;
 
-    try {
-      // Direct API call for speed
-      const res = await axios.get(`http://ws75.aptoide.com/api/7/apps/search/query=${text}/limit=1`);
-      const app = res.data?.datalist?.list[0];
+    const response = await axios.get(apiUrl);
+    const data = response.data;
 
-      if (!app) return Matrix.sendMessage(m.from, { text: "⚠️ *ɴᴏᴛ ꜰᴏᴜɴᴅ.*" }, { quoted: m });
-
-      const appSize = (app.size / 1048576).toFixed(2);
-
-      const dashboard = `
-╭––––––『 *ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴀᴘᴋ* 』––––––
-┆ 📦 *ɴᴀᴍᴇ* : ${app.name}
-┆ 🏋 *sɪᴢᴇ* : ${appSize} ᴍʙ
-┆ 📅 *ᴜᴘᴅᴀᴛᴇᴅ* : ${app.updated}
-╰–––––––––––––––––––––––––●`.trim();
-
-      // Send info and file simultaneously (Async)
-      Matrix.sendMessage(m.from, { 
-        image: { url: app.icon },
-        caption: dashboard,
-        contextInfo: {
-          isForwarded: true,
-          forwardedNewsletterMessageInfo: {
-            newsletterJid: '120363289379419860@newsletter',
-            newsletterName: "ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴀᴘᴘs"
-          }
-        }
-      }, { quoted: m });
-
-      return Matrix.sendMessage(m.from, {
-        document: { url: app.file.path_alt },
-        fileName: `${app.name}.apk`,
-        mimetype: "application/vnd.android.package-archive"
-      }, { quoted: m });
-
-    } catch (e) {
-      return Matrix.sendMessage(m.from, { text: "❌ *ᴇʀʀᴏʀ.*" }, { quoted: m });
+    if (!data || !data.list || !data.list.length) {
+      return Matrix.sendMessage(m.from, { text: `❌ No results found for "${text}"` }, { quoted: m });
     }
-  }
-}
 
-export default apkDownloader;
+    const app = data.list[0];
+    if (!app.link) {
+      return Matrix.sendMessage(m.from, { text: `❌ APK download link not available for "${app.name}"` }, { quoted: m });
+    }
+
+    // Fetch APK file
+    const apkResponse = await axios.get(app.link, { responseType: 'arraybuffer' });
+    const apkBuffer = Buffer.from(apkResponse.data);
+
+    // Optional: save temporarily
+    const tempFile = `./temp_${app.name.replace(/\s/g, '_')}.apk`;
+    await writeFile(tempFile, apkBuffer);
+
+    // Send as file
+    await Matrix.sendMessage(m.from, {
+      document: fs.readFileSync(tempFile),
+      mimetype: 'application/vnd.android.package-archive',
+      fileName: `${app.name}.apk`,
+      caption: `📱 *App Name:* ${app.name}\n📥 *Downloads:* ${app.downloads || 'N/A'}\n⭐ *Rating:* ${app.star || 'N/A'}\n📝 *Description:* ${app.description || 'No description available'}`,
+      contextInfo: {
+        mentionedJid: [m.sender],
+        forwardingScore: 999,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: '120363289379419860@newsletter',
+          newsletterName: "POPKID-XMD",
+          serverMessageId: 200
+        }
+      }
+    }, { quoted: m });
+
+    // Clean up temp file
+    await unlink(tempFile);
+
+  } catch (err) {
+    console.error(err);
+    await Matrix.sendMessage(m.from, { text: `❌ Error fetching APK for "${text}"` }, { quoted: m });
+  }
+};
+
+export default apk;
