@@ -1,63 +1,58 @@
-
 import config from '../../config.cjs';
 import axios from 'axios';
 
-const apkDownloader = async (m, sock) => {
+const apkDownloader = async (m, Matrix) => {
   const prefix = config.PREFIX;
-  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
-  const text = m.body.slice(prefix.length + cmd.length).trim();
+  const body = m.body || '';
+  if (!body.startsWith(prefix)) return;
+  
+  const cmd = body.slice(prefix.length).split(' ')[0].toLowerCase();
+  const text = body.slice(prefix.length + cmd.length).trim();
 
-  if (cmd === "app") {
-    if (!text) {
-      return sock.sendMessage(m.from, { text: "❌ *Please provide an app name to search.*" }, { quoted: m });
-    }
+  if (cmd === "app" || cmd === "apk") {
+    if (!text) return Matrix.sendMessage(m.from, { text: `*❌ ǫᴜᴇʀʏ?*` }, { quoted: m });
 
-    // Start the ping-like reaction
-    await sock.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
+    await Matrix.sendMessage(m.from, { react: { text: "📥", key: m.key } });
 
     try {
-      const sanitizedQuery = text.trim().replace(/[^a-zA-Z0-9\s]/g, '');
-      const apiUrl = `http://ws75.aptoide.com/api/7/apps/search/query=${sanitizedQuery}/limit=1`;
-      const response = await axios.get(apiUrl);
-      const data = response.data;
+      // Direct API call for speed
+      const res = await axios.get(`http://ws75.aptoide.com/api/7/apps/search/query=${text}/limit=1`);
+      const app = res.data?.datalist?.list[0];
 
-      if (!data || !data.datalist || !data.datalist.list.length) {
-        return sock.sendMessage(m.from, { text: "⚠️ *No results found for the given app name.*" }, { quoted: m });
-      }
+      if (!app) return Matrix.sendMessage(m.from, { text: "⚠️ *ɴᴏᴛ ꜰᴏᴜɴᴅ.*" }, { quoted: m });
 
-      const app = data.datalist.list[0];
-      const appSize = (app.size / 1048576).toFixed(2); // Convert bytes to MB
+      const appSize = (app.size / 1048576).toFixed(2);
 
-      // Compact and Attractive Box
-      const box = `
-╭─────⟪ *APK Downloader* ⟫─
-┃ 📦 *Name:* ${app.name}
-┃ 🏋 *Size:* ${appSize} MB
-┃ 🏷 *Package:* ${app.package}
-┃ 📅 *Updated:* ${app.updated}
-╰─────────────────────
-🔗 *Powered By Popkid*`;
+      const dashboard = `
+╭––––––『 *ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴀᴘᴋ* 』––––––
+┆ 📦 *ɴᴀᴍᴇ* : ${app.name}
+┆ 🏋 *sɪᴢᴇ* : ${appSize} ᴍʙ
+┆ 📅 *ᴜᴘᴅᴀᴛᴇᴅ* : ${app.updated}
+╰–––––––––––––––––––––––––●`.trim();
 
-      // Send the box with APK information
-      await sock.sendMessage(m.from, { text: box }, { quoted: m });
-
-      // Send the APK file
-      await sock.sendMessage(m.from, {
-        document: { url: app.file.path_alt },
-        fileName: `${app.name}.apk`,
-        mimetype: "application/vnd.android.package-archive",
-        caption: "Here is the APK file you requested."
+      // Send info and file simultaneously (Async)
+      Matrix.sendMessage(m.from, { 
+        image: { url: app.icon },
+        caption: dashboard,
+        contextInfo: {
+          isForwarded: true,
+          forwardedNewsletterMessageInfo: {
+            newsletterJid: '120363289379419860@newsletter',
+            newsletterName: "ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴀᴘᴘs"
+          }
+        }
       }, { quoted: m });
 
-      // Final success reaction
-      await sock.sendMessage(m.from, { react: { text: "✅", key: m.key } });
+      return Matrix.sendMessage(m.from, {
+        document: { url: app.file.path_alt },
+        fileName: `${app.name}.apk`,
+        mimetype: "application/vnd.android.package-archive"
+      }, { quoted: m });
 
-    } catch (error) {
-      console.error("Error:", error);
-      return sock.sendMessage(m.from, { text: "❌ *An error occurred while fetching the APK. Please try again.*" }, { quoted: m });
+    } catch (e) {
+      return Matrix.sendMessage(m.from, { text: "❌ *ᴇʀʀᴏʀ.*" }, { quoted: m });
     }
   }
 }
 
 export default apkDownloader;
-                             
