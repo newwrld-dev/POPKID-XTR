@@ -67,7 +67,7 @@
     "yargs-parser": "^21.1.1",
     "youtubedl-core": "^4.11.7",
     "youtube-yts": "^2.0.0",
-    "ytdl-core": "^4.11.5"
+    "ytdl-core": "^4.11.5",
     "yt-search": "^4.11.5"
   }
   }
