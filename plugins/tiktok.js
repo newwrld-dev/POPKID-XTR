@@ -8,125 +8,76 @@ const tiktok = async (m, gss) => {
   const prefix = config.PREFIX;
   const body = m.body || "";
 
-  const cmd = body.startsWith(prefix)
-    ? body.slice(prefix.length).trim().split(/\s+/)[0].toLowerCase()
-    : "";
-
-  if (!["tiktok", "tt"].includes(cmd)) return;
+  // Handle command check
+  const args = body.trim().split(/\s+/);
+  const cmd = args[0].toLowerCase();
+  if (![prefix + "tiktok", prefix + "tt"].includes(cmd)) return;
 
   try {
+    // Prevent spamming the same request
     if (processed.has(m.key.id)) return;
     processed.add(m.key.id);
-    setTimeout(() => processed.delete(m.key.id), 300000);
+    setTimeout(() => processed.delete(m.key.id), 30000); // 30s cooldown
 
-    /* ================= EXTRACT URL SAFELY ================= */
-    const urlMatch = body.match(
-      /(https?:\/\/(?:www\.)?(?:vt|vm|tiktok)\.com\/[^\s]+)/i
-    );
+    // Improved Regex to catch various TikTok link formats
+    const urlMatch = body.match(/https?:\/\/(?:vm|vt|www)\.tiktok\.com\/\S+/i);
 
     if (!urlMatch) {
-      return m.reply(
-        "❌ Please send a valid TikTok link.\n\nExample:\n.tiktok https://vt.tiktok.com/xxxx"
-      );
+      return m.reply("❌ Please send a valid TikTok link.\n\nExample:\n.tiktok https://vt.tiktok.com/xxxx");
     }
 
-    const url = urlMatch[1].trim();
+    const url = urlMatch[0].split('?')[0]; // Clean the URL of tracking params
 
-    await gss.sendMessage(m.from, {
-      react: { text: "⏳", key: m.key },
-    });
+    await gss.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
 
     let videoUrl = null;
     let title = "TikTok Video";
 
-    /* ================= SIPUTZX API ================= */
+    /* ================= ATTEMPT 1: SIPUTZX API ================= */
     try {
-      const api = `https://api.siputzx.my.id/api/d/tiktok?url=${encodeURIComponent(
-        url
-      )}`;
-
-      const res = await axios.get(api, { timeout: 15000 });
-
-      if (res.data?.status && res.data?.data) {
-        const d = res.data.data;
-        title = d.metadata?.title || title;
-
-        if (Array.isArray(d.urls) && d.urls.length > 0) {
-          videoUrl = d.urls[0];
-        } else {
-          videoUrl = d.video_url || d.download_url || d.url || null;
-        }
+      const { data } = await axios.get(`https://api.siputzx.my.id/api/d/tiktok?url=${url}`);
+      
+      if (data.status && data.data) {
+        const d = data.data;
+        title = d.title || "No Title";
+        // Check for common video field names in Siputzx response
+        videoUrl = d.video_url || d.nowm || d.no_watermark || (d.urls && d.urls[0]);
       }
     } catch (e) {
-      console.log("Siputzx failed:", e.message);
+      console.log("Siputzx API error:", e.message);
     }
 
-    /* ================= FALLBACK: RUHEND ================= */
+    /* ================= ATTEMPT 2: RUHEND FALLBACK ================= */
     if (!videoUrl) {
       try {
-        const data = await ttdl(url);
-        const media = data?.data?.find(v => v.type === "video");
-
-        if (media?.url) {
-          return await gss.sendMessage(
-            m.from,
-            {
-              video: { url: media.url },
-              mimetype: "video/mp4",
-              caption: "🎥 TikTok Video",
-            },
-            { quoted: m }
-          );
+        const res = await ttdl(url);
+        if (res && res.data) {
+          // Find the video without watermark
+          const videoData = res.data.find(v => v.type === "nowatermark" || v.type === "video");
+          videoUrl = videoData?.url;
         }
       } catch (e) {
-        console.log("ttdl failed:", e.message);
+        console.log("Ruhend-scraper error:", e.message);
       }
     }
 
-    if (!videoUrl) {
-      return m.reply("❌ Failed to download TikTok video.");
+    /* ================= FINAL DELIVERY ================= */
+    if (videoUrl) {
+      await gss.sendMessage(m.from, {
+        video: { url: videoUrl },
+        caption: `✅ *Success*\n📝 *Title:* ${title}`,
+        mimetype: "video/mp4"
+      }, { quoted: m });
+      
+      return await gss.sendMessage(m.from, { react: { text: "✅", key: m.key } });
+    } else {
+      throw new Error("Could not extract video URL");
     }
 
-    /* ================= BUFFER DOWNLOAD ================= */
-    try {
-      const res = await axios.get(videoUrl, {
-        responseType: "arraybuffer",
-        timeout: 60000,
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          Referer: "https://www.tiktok.com/",
-        },
-      });
-
-      const buffer = Buffer.from(res.data);
-
-      if (!buffer || buffer.length < 100000) {
-        throw new Error("Invalid buffer");
-      }
-
-      await gss.sendMessage(
-        m.from,
-        {
-          video: buffer,
-          mimetype: "video/mp4",
-          caption: `🎥 TikTok\n📝 ${title}`,
-        },
-        { quoted: m }
-      );
-    } catch {
-      await gss.sendMessage(
-        m.from,
-        {
-          video: { url: videoUrl },
-          mimetype: "video/mp4",
-          caption: `🎥 TikTok\n📝 ${title}`,
-        },
-        { quoted: m }
-      );
-    }
   } catch (err) {
-    console.error("TIKTOK ERROR:", err);
-    m.reply("❌ Error while processing TikTok.");
+    console.error("TIKTOK CMD ERROR:", err);
+    m.reply("❌ An error occurred while processing your request. The video might be private or the server is down.");
+    await gss.sendMessage(m.from, { react: { text: "❌", key: m.key } });
   }
 };
 
