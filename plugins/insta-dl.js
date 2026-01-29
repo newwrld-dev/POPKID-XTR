@@ -1,48 +1,60 @@
-import axios from "axios";
-import config from "../config.cjs";
+import axios from 'axios';
+import config from '../config.cjs';
 
-const instagram = async (m, Matrix) => {
+const instaDownload = async (m, gss) => {
   const prefix = config.PREFIX;
-  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(" ")[0].toLowerCase() : "";
-  const query = m.body.slice(prefix.length + cmd.length).trim();
+  const body = m.body || "";
+  const cmd = body.startsWith(prefix)
+    ? body.slice(prefix.length).split(" ")[0].toLowerCase()
+    : "";
 
-  if (!["ig", "insta", "instagram"].includes(cmd)) return;
-
-  if (!query || !query.startsWith("http")) {
-    return Matrix.sendMessage(m.from, { text: "❌ *Usage:* `.ig <Instagram URL>`" }, { quoted: m });
-  }
+  // Command triggers
+  if (cmd !== "instagram" && cmd !== "ig" && cmd !== "igdl") return;
 
   try {
-    await Matrix.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
+    const args = body.slice(prefix.length + cmd.length).trim();
 
-    const { data } = await axios.get(`https://api.davidcyriltech.my.id/instagram?url=${query}`);
-
-    if (!data.success || !data.downloadUrl) {
-      return Matrix.sendMessage(m.from, { text: "⚠️ *Failed to fetch Instagram video. Please try again.*" }, { quoted: m });
+    if (!args) {
+      return m.reply("📸 *Usage:* .ig [instagram-url]");
     }
 
-    await Matrix.sendMessage(m.from, {
-      video: { url: data.downloadUrl },
-      mimetype: "video/mp4",
-      caption: "📥 *popkid-XMD ✅*",
-      contextInfo: {
-        mentionedJid: [m.sender],
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: "120363289379419860@newsletter",
-          newsletterName: "popkid-Updates",
-          serverMessageId: 143,
-        },
-      },
-    }, { quoted: m });
+    await m.reply("_⏳ Fetching Instagram media..._");
 
-    await Matrix.sendMessage(m.from, { react: { text: "✅", key: m.key } });
+    // API Endpoint for Instagram
+    const apiUrl = `https://api.yupra.my.id/api/downloader/Instagram?url=${encodeURIComponent(args)}`;
+    const response = await axios.get(apiUrl);
+    const res = response.data;
+
+    // Validate response status and existence of results
+    if (!res || res.status !== 200 || !res.result?.medias) {
+      return m.reply("❌ *Error:* Could not retrieve media. Please ensure the link is public.");
+    }
+
+    const medias = res.result.medias; //
+    
+    // Loop through found media and send
+    for (const item of medias) {
+      const mediaUrl = item.url; //
+      const type = item.type; //
+
+      if (type === "video") {
+        await gss.sendMessage(m.from, {
+          video: { url: mediaUrl },
+          caption: `✅ *Instagram Video Downloaded*`,
+          mimetype: "video/mp4"
+        }, { quoted: m });
+      } else if (type === "image") {
+        await gss.sendMessage(m.from, {
+          image: { url: mediaUrl },
+          caption: `✅ *Instagram Image Downloaded*`
+        }, { quoted: m });
+      }
+    }
 
   } catch (error) {
-    console.error("Instagram Downloader Error:", error);
-    Matrix.sendMessage(m.from, { text: "❌ *An error occurred while processing your request. Please try again later.*" }, { quoted: m });
+    console.error("IG CMD ERROR:", error);
+    m.reply("⚠️ *System Error:* Instagram server is currently unreachable.");
   }
 };
 
-export default instagram;
+export default instaDownload;
