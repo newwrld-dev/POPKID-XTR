@@ -5,80 +5,137 @@ import config from "../config.cjs";
 const processed = new Set();
 
 const tiktok = async (m, gss) => {
-  const prefix = config.PREFIX;
-  const body = m.body || "";
+    const prefix = config.PREFIX;
+    const body = m.body || "";
+    const chatId = m.from;
 
-  // Handle command check
-  const args = body.trim().split(/\s+/);
-  const cmd = args[0].toLowerCase();
-  if (![prefix + "tiktok", prefix + "tt"].includes(cmd)) return;
+    const cmd = body.startsWith(prefix)
+        ? body.slice(prefix.length).trim().split(/\s+/)[0].toLowerCase()
+        : "";
 
-  try {
-    // Prevent spamming the same request
-    if (processed.has(m.key.id)) return;
-    processed.add(m.key.id);
-    setTimeout(() => processed.delete(m.key.id), 30000); // 30s cooldown
+    if (!["tiktok", "tt"].includes(cmd)) return;
 
-    // Improved Regex to catch various TikTok link formats
-    const urlMatch = body.match(/https?:\/\/(?:vm|vt|www)\.tiktok\.com\/\S+/i);
-
-    if (!urlMatch) {
-      return m.reply("❌ Please send a valid TikTok link.\n\nExample:\n.tiktok https://vt.tiktok.com/xxxx");
-    }
-
-    const url = urlMatch[0].split('?')[0]; // Clean the URL of tracking params
-
-    await gss.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
-
-    let videoUrl = null;
-    let title = "TikTok Video";
-
-    /* ================= ATTEMPT 1: SIPUTZX API ================= */
     try {
-      const { data } = await axios.get(`https://api.siputzx.my.id/api/d/tiktok?url=${url}`);
-      
-      if (data.status && data.data) {
-        const d = data.data;
-        title = d.title || "No Title";
-        // Check for common video field names in Siputzx response
-        videoUrl = d.video_url || d.nowm || d.no_watermark || (d.urls && d.urls[0]);
-      }
-    } catch (e) {
-      console.log("Siputzx API error:", e.message);
-    }
+        if (processed.has(m.key.id)) return;
+        processed.add(m.key.id);
+        setTimeout(() => processed.delete(m.key.id), 300000);
 
-    /* ================= ATTEMPT 2: RUHEND FALLBACK ================= */
-    if (!videoUrl) {
-      try {
-        const res = await ttdl(url);
-        if (res && res.data) {
-          // Find the video without watermark
-          const videoData = res.data.find(v => v.type === "nowatermark" || v.type === "video");
-          videoUrl = videoData?.url;
+        // Extract URL from command
+        const args = body.trim().split(/\s+/);
+        const url = args.slice(1).join(' ').trim();
+
+        if (!url) {
+            return m.reply("Please provide a TikTok link for the video.");
         }
-      } catch (e) {
-        console.log("Ruhend-scraper error:", e.message);
-      }
-    }
 
-    /* ================= FINAL DELIVERY ================= */
-    if (videoUrl) {
-      await gss.sendMessage(m.from, {
-        video: { url: videoUrl },
-        caption: `✅ *Success*\n📝 *Title:* ${title}`,
-        mimetype: "video/mp4"
-      }, { quoted: m });
-      
-      return await gss.sendMessage(m.from, { react: { text: "✅", key: m.key } });
-    } else {
-      throw new Error("Could not extract video URL");
-    }
+        // Comprehensive URL Validation
+        const tiktokPatterns = [
+            /https?:\/\/(?:www\.)?tiktok\.com\//,
+            /https?:\/\/(?:vm\.)?tiktok\.com\//,
+            /https?:\/\/(?:vt\.)?tiktok\.com\//,
+            /https?:\/\/(?:www\.)?tiktok\.com\/@/,
+            /https?:\/\/(?:www\.)?tiktok\.com\/t\//
+        ];
 
-  } catch (err) {
-    console.error("TIKTOK CMD ERROR:", err);
-    m.reply("❌ An error occurred while processing your request. The video might be private or the server is down.");
-    await gss.sendMessage(m.from, { react: { text: "❌", key: m.key } });
-  }
+        const isValidUrl = tiktokPatterns.some(pattern => pattern.test(url));
+        if (!isValidUrl) {
+            return m.reply("That is not a valid TikTok link. Please provide a valid TikTok video link.");
+        }
+
+        await gss.sendMessage(chatId, {
+            react: { text: '🔄', key: m.key }
+        });
+
+        let videoUrl = null;
+        let title = "TikTok Video";
+
+        /* ================= SIPUTZX API ================= */
+        try {
+            const apiUrl = `https://api.siputzx.my.id/api/d/tiktok?url=${encodeURIComponent(url)}`;
+            const response = await axios.get(apiUrl, { 
+                timeout: 15000,
+                headers: {
+                    'accept': '*/*',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+            });
+
+            if (response.data?.status && response.data.data) {
+                const d = response.data.data;
+                title = d.metadata?.title || d.title || title;
+
+                if (Array.isArray(d.urls) && d.urls.length > 0) {
+                    videoUrl = d.urls[0];
+                } else {
+                    videoUrl = d.video_url || d.nowm || d.url || d.download_url;
+                }
+            }
+        } catch (apiError) {
+            console.error(`Siputzx API failed: ${apiError.message}`);
+        }
+
+        /* ================= FALLBACK: RUHEND ================= */
+        if (!videoUrl) {
+            try {
+                const downloadData = await ttdl(url);
+                if (downloadData?.data?.length > 0) {
+                    const media = downloadData.data.find(v => v.type === 'video' || v.type === 'nowatermark');
+                    if (media) videoUrl = media.url;
+                }
+            } catch (ttdlError) {
+                console.error("ttdl fallback failed:", ttdlError.message);
+            }
+        }
+
+        /* ================= SENDING PHASE ================= */
+        if (videoUrl) {
+            try {
+                const videoResponse = await axios.get(videoUrl, {
+                    responseType: 'arraybuffer',
+                    timeout: 60000,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Referer': 'https://www.tiktok.com/'
+                    }
+                });
+                
+                const videoBuffer = Buffer.from(videoResponse.data);
+                
+                // Buffer Validation (File Signatures)
+                const isValidVideo = videoBuffer.length > 1000 && (
+                    videoBuffer.toString('hex', 0, 4) === '000001ba' || 
+                    videoBuffer.toString('hex', 0, 4) === '000001b3' || 
+                    videoBuffer.toString('hex', 0, 8) === '0000001866747970' || 
+                    videoBuffer.toString('hex', 0, 4) === '1a45dfa3'
+                );
+
+                if (!isValidVideo && videoBuffer.length < 10000) {
+                    throw new Error("Invalid video buffer detected");
+                }
+
+                return await gss.sendMessage(chatId, {
+                    video: videoBuffer,
+                    mimetype: "video/mp4",
+                    caption: `𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗞𝗡𝗜𝗚𝗛𝗧-𝗕𝗢𝗧\n\n📝 Title: ${title}`
+                }, { quoted: m });
+
+            } catch (downloadError) {
+                console.error(`Buffer send failed, trying direct URL: ${downloadError.message}`);
+                // Fallback to sending URL directly (avoids buffer issues)
+                return await gss.sendMessage(chatId, {
+                    video: { url: videoUrl },
+                    mimetype: "video/mp4",
+                    caption: `𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗘𝗗 𝗕𝗬 𝗞𝗡𝗜𝗚𝗛𝗧-𝗕𝗢𝗧\n\n📝 Title: ${title}`
+                }, { quoted: m });
+            }
+        }
+
+        return m.reply("❌ Failed to download TikTok video. All methods failed.");
+
+    } catch (err) {
+        console.error("TIKTOK ERROR:", err);
+        m.reply("❌ An error occurred while processing the request.");
+    }
 };
 
 export default tiktok;
