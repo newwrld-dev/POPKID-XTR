@@ -9,7 +9,7 @@ const play = async (m, gss) => {
     ? body.slice(prefix.length).split(" ")[0].toLowerCase()
     : "";
 
-  if (cmd !== "play3") return;
+  if (cmd !== "play") return;
 
   try {
     const text = body.slice(prefix.length + cmd.length).trim();
