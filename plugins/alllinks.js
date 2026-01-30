@@ -9,7 +9,7 @@ const aioDownload = async (m, gss) => {
     : "";
 
   // Set the command trigger
-  if (cmd !== "aillinks" && cmd !== "dl") return;
+  if (cmd !== "allinks" && cmd !== "alldl") return;
 
   try {
     const url = body.slice(prefix.length + cmd.length).trim();
