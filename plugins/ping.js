@@ -1,138 +1,71 @@
+import axios from 'axios';
+import fs from 'fs';
+import os from 'os';
 import config from '../config.cjs';
 
-const ping = async (m, Matrix) => {
+const pingCmd = async (m, Matrix) => {
   const prefix = config.PREFIX;
-  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
+  const body = m.body || "";
+  const cmd = body.startsWith(prefix) 
+    ? body.slice(prefix.length).split(" ")[0].toLowerCase() 
+    : "";
 
-  if (cmd === "ping") {
-    const start = new Date().getTime();
+  if (cmd !== "ping") return;
 
-    const reactionEmojis = ['🔥', '⚡', '🚀', '💨', '🎯', '🎉', '🌟', '💥', '🕐', '🔹'];
-    const textEmojis = ['💎', '🏆', '⚡️', '🚀', '🎶', '🌠', '🌀', '🔱', '🛡️', '✨'];
-    const progressEmojis = ['▰', '▰', '▰', '▰', '▰', '▰', '▰', '▰', '▰', '▰'];
-    const animationFrames = ['◰', '◳', '◲', '◱']; // Spinner animation frames
-    const gradientColors = ['🟥', '🟧', '🟨', '🟩', '🟦', '🟪']; // Color progression
-    const pingEmojis = ['●', '◎', '○', '◌']; // Ping wave animation
+  try {
+    const start = Date.now();
+    
+    // Function to fetch image exactly like your menu script
+    const getMenuImage = async () => {
+      if (config.MENU_IMAGE && config.MENU_IMAGE.trim() !== '') {
+        try {
+          const response = await axios.get(config.MENU_IMAGE, { responseType: 'arraybuffer' });
+          return Buffer.from(response.data, 'binary');
+        } catch (error) {
+          return fs.readFileSync('./media/zenor.jpeg');
+        }
+      } else {
+        return fs.readFileSync('./media/zenor.jpeg');
+      }
+    };
 
-    // Select random emojis
-    const reactionEmoji = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
-    let textEmoji = textEmojis[Math.floor(Math.random() * textEmojis.length)];
+    const menuImage = await getMenuImage();
+    const latency = Date.now() - start;
 
-    // Ensure reaction and text emojis are different
-    while (textEmoji === reactionEmoji) {
-      textEmoji = textEmojis[Math.floor(Math.random() * textEmojis.length)];
-    }
+    // Stylish Text Content
+    const pingStatus = `*ᴘᴏᴘᴋɪᴅ xᴍᴅ sᴛᴀᴛᴜs*\n\n` +
+                       `🚀 *ʟᴀᴛᴇɴᴄʏ:* ${latency}ᴍs\n` +
+                       `💻 *ᴘʟᴀᴛꜰᴏʀᴍ:* ${os.platform()}\n` +
+                       `⚙️ *ᴜᴘᴛɪᴍᴇ:* ${Math.floor(process.uptime() / 60)} ᴍɪɴᴜᴛᴇs\n\n` +
+                       `_ᴘᴏᴘᴋɪᴅ ʙᴏᴛ ɪs ᴏᴘᴇʀᴀᴛɪᴏɴᴀʟ_`;
 
-    await m.React(textEmoji);
-
-    // Create initial progress bar message
-    const loadingMessage = await Matrix.sendMessage(m.from, {
-      text: `*🏁 PING TEST INITIATED...*\n\n` +
-            `🔸 *Status:* Measuring latency\n` +
-            `🔸 *Animation:* ${animationFrames[0]} Initializing...\n` +
-            `🔸 *Progress:* ${progressEmojis.slice(0, 2).join('')}${'▱'.repeat(8)}\n` +
-            `🔸 *Ping Wave:* ${pingEmojis[0]}${'─'.repeat(9)}${pingEmojis[0]}\n\n` +
-            `*⏳ Please wait...*`,
+    await Matrix.sendMessage(m.from, {
+      image: menuImage,
+      caption: pingStatus,
       contextInfo: {
-        mentionedJid: [m.sender]
+        mentionedJid: [m.sender],
+        forwardingScore: 999,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: '120363289379419860@newsletter',
+          newsletterName: "ᴘᴏᴘᴋɪᴅ ᴜᴘᴅᴀᴛᴇs",
+          serverMessageId: 143
+        },
+        externalAdReply: {
+          title: "ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴏꜰꜰɪᴄɪᴀʟ",
+          body: "sʏsᴛᴇᴍ ᴘᴇʀꜰᴏʀᴍᴀɴᴄᴇ ᴄʜᴇᴄᴋ",
+          thumbnailUrl: "https://files.catbox.moe/yr339d.jpg",
+          sourceUrl: "https://whatsapp.com/channel/0029VacgxK96hENmSRMRxx1r",
+          mediaType: 1,
+          renderLargerThumbnail: false
+        }
       }
     }, { quoted: m });
 
-    // Animation function
-    const animateProgress = async (frame, progress, colorIndex, waveFrame, responseTime = null) => {
-      const progressFilled = progressEmojis.slice(0, progress).join('');
-      const progressEmpty = '▱'.repeat(10 - progress);
-      const waveLength = 10;
-      const wavePos = Math.floor(waveFrame % waveLength);
-      const waveLeft = '─'.repeat(wavePos);
-      const waveRight = '─'.repeat(waveLength - wavePos - 1);
-      
-      let statusText;
-      if (responseTime !== null) {
-        statusText = `*✅ PING COMPLETE!*\n\n` +
-                     `${gradientColors[colorIndex]} *ZenorSPEED:* ${responseTime.toFixed(3)}ms ${reactionEmoji}\n` +
-                     `${textEmoji} *Precision:* ${(1 - (responseTime % 0.01)).toFixed(4)}\n` +
-                     `🏁 *Progress:* ${progressFilled}${progressEmpty} [${progress * 10}%]\n` +
-                     `🌀 *Animation:* ${animationFrames[frame]} Completed!\n` +
-                     `🌊 *Ping Wave:* ${pingEmojis[waveFrame % 4]}${waveLeft}●${waveRight}${pingEmojis[(waveFrame + 2) % 4]}\n\n` +
-                     `*${textEmoji} System Status: Optimal*`;
-      } else {
-        const statusMessages = [
-          "Calibrating sensors...",
-          "Measuring quantum latency...",
-          "Optimizing connection...",
-          "Synchronizing timestamps...",
-          "Finalizing calculations..."
-        ];
-        
-        statusText = `*${animationFrames[frame]} PING IN PROGRESS...*\n\n` +
-                     `${gradientColors[colorIndex]} *Status:* ${statusMessages[Math.floor(progress / 2)]}\n` +
-                     `📊 *Progress:* ${progressFilled}${progressEmpty} [${progress * 10}%]\n` +
-                     `🌀 *Animation:* ${animationFrames[frame]} Active\n` +
-                     `🌊 *Ping Wave:* ${pingEmojis[waveFrame % 4]}${waveLeft}◎${waveRight}${pingEmojis[(waveFrame + 2) % 4]}\n\n` +
-                     `*⏳ Please wait...*`;
-      }
-
-      await Matrix.sendMessage(m.from, {
-        text: statusText,
-        edit: loadingMessage.key
-      });
-    };
-
-    // Animate the progress bar
-    let progress = 0;
-    let frame = 0;
-    let colorIndex = 0;
-    let waveFrame = 0;
-    
-    const animationInterval = setInterval(async () => {
-      await animateProgress(frame, progress, colorIndex, waveFrame);
-      
-      // Update animation states
-      frame = (frame + 1) % animationFrames.length;
-      progress = Math.min(progress + 1, 10);
-      colorIndex = Math.floor(progress / 2);
-      waveFrame++;
-      
-      // Stop animation when progress is complete
-      if (progress >= 10) {
-        clearInterval(animationInterval);
-        
-        // Get final response time
-        const end = new Date().getTime();
-        const responseTime = (end - start) / 1000;
-        
-        // Show final result with animation
-        for (let i = 0; i < 3; i++) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-          await animateProgress((frame + i) % animationFrames.length, 10, 5, waveFrame + i, responseTime);
-        }
-        
-        // Final static message
-        await Matrix.sendMessage(m.from, {
-          text: `*${textEmoji} POPKID PING RESULTS ${textEmoji}*\n\n` +
-                `⚡ *Response Time:* \`${responseTime.toFixed(3)}ms\`\n` +
-                `🎯 *Precision:* \`${(1 - (responseTime % 0.01)).toFixed(4)}\`\n` +
-                `📊 *Performance:* ${'⭐'.repeat(Math.max(1, 5 - Math.floor(responseTime * 10)))}\n` +
-                `🌈 *Gradient Test:* ${gradientColors.join('→')}\n` +
-                `🌀 *Animation Cycles:* ${waveFrame}\n\n` +
-                `*${reactionEmoji} System: Optimal | Latency: Excellent ${reactionEmoji}*\n` +
-                `_Powered by popkid-XMD Technology_`,
-          edit: loadingMessage.key,
-          contextInfo: {
-            mentionedJid: [m.sender],
-            forwardingScore: 999,
-            isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-              newsletterJid: '120363289379419860@newsletter',
-              newsletterName: "POPKID-XMD",
-              serverMessageId: 143
-            }
-          }
-        });
-      }
-    }, 200);
+  } catch (error) {
+    console.error("PING ERROR:", error);
+    m.reply("⚠️ *Error:* System check failed.");
   }
 };
 
-export default ping;
+export default pingCmd;
