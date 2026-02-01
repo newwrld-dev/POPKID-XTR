@@ -1,14 +1,16 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
-import {
+import 'dotenv/config'; 
+import pkg from '@whiskeysockets/baileys';
+const {
     makeWASocket,
     Browsers,
     fetchLatestBaileysVersion,
     DisconnectReason,
     useMultiFileAuthState,
-    jidNormalizedUser
-} from '@whiskeysockets/baileys';
+    jidNormalizedUser,
+    makeInMemoryStore,
+    proto
+} = pkg;
+
 import { Handler, Callupdate, GroupUpdate } from './data/index.js';
 import express from 'express';
 import pino from 'pino';
@@ -18,14 +20,22 @@ import chalk from 'chalk';
 import zlib from 'zlib';
 import { promisify } from 'util';
 import config from './config.cjs';
-import pkg from './lib/autoreact.cjs';
+import autoreactPkg from './lib/autoreact.cjs';
 
-const { emojis, doReact } = pkg;
+const { emojis, doReact } = autoreactPkg;
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 let useQR = false;
 let initialConnection = true;
+
+// --- INITIALIZE STORE (Fizzy-style Persistence) ---
+const store = makeInMemoryStore({ 
+    logger: pino().child({ level: 'silent', stream: 'store' }) 
+});
+const storePath = './baileys_store.json';
+if (fs.existsSync(storePath)) store.readFromFile(storePath);
+setInterval(() => store.writeToFile(storePath), 10_000);
 
 // --- HELPERS ---
 const isEnabled = (val) => {
@@ -33,13 +43,10 @@ const isEnabled = (val) => {
     return String(val).toLowerCase() === "true";
 };
 
-// Helper to prevent rate-limit lag
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 const logger = pino({ level: "silent" });
-
-const __filename = new URL(import.meta.url).pathname;
-const __dirname = path.dirname(__filename);
+const __dirname = path.resolve();
 const sessionDir = path.join(__dirname, 'session');
 const credsPath = path.join(sessionDir, 'creds.json');
 
@@ -53,12 +60,10 @@ async function loadGiftedSession() {
         const compressedBase64 = config.SESSION_ID.substring("POPKID~".length);
         try {
             const compressedBuffer = Buffer.from(compressedBase64, 'base64');
-            if (compressedBuffer[0] === 0x1f && compressedBuffer[1] === 0x8b) {
-                const gunzip = promisify(zlib.gunzip);
-                const decompressedBuffer = await gunzip(compressedBuffer);
-                await fs.promises.writeFile(credsPath, decompressedBuffer.toString('utf-8'));
-                return true;
-            }
+            const gunzip = promisify(zlib.gunzip);
+            const decompressedBuffer = await gunzip(compressedBuffer);
+            await fs.promises.writeFile(credsPath, decompressedBuffer.toString('utf-8'));
+            return true;
         } catch (error) { return false; }
     }
     return false;
@@ -75,8 +80,14 @@ async function start() {
             printQRInTerminal: useQR,
             browser: Browsers.macOS("Desktop"),
             auth: state,
-            getMessage: async (key) => { return { conversation: "POPKID-MD" }; }
+            getMessage: async (key) => { 
+                if (store) return (await store.loadMessage(key.remoteJid, key.id))?.message || undefined;
+                return { conversation: "POPKID-MD" }; 
+            }
         });
+
+        // BIND STORE: Fixes "makeInMemoryStore is not a function" and data loss
+        store.bind(Matrix.ev);
 
         // --- CONNECTION HANDLER ---
         Matrix.ev.on('connection.update', async (update) => {
@@ -134,15 +145,14 @@ async function start() {
                 // --- STATUS (STORY) AUTOMATION ---
                 if (remoteJid === 'status@broadcast') {
                     
-                    // 1. Auto View Status (using .env variable names)
+                    // 1. Auto View Status
                     if (isEnabled(process.env.AUTO_READ_STATUS) || isEnabled(config.AUTO_STATUS_SEEN)) {
                         await Matrix.readMessages([mek.key]);
                         console.log(chalk.cyan(`[VIEWED] Status from: ${participant}`));
                     }
 
-                    // 2. Auto Status Reaction (Extracted Logic + Anti-Lag)
+                    // 2. Auto Status Reaction (Anti-Lag)
                     if (isEnabled(process.env.AUTO_STATUS_REACT) || isEnabled(config.AUTO_STATUS_REACT)) {
-                        // Human-like delay to prevent rate-overlimit errors
                         await delay(Math.floor(Math.random() * 2000) + 3000); 
 
                         const statusEmojis = ['❤️', '💸', '😇', '🍂', '💥', '💯', '🔥', '💫', '💎', '💗', '🤍', '🖤', '👀', '🙌', '🙆', '🚩', '🥰', '💐', '😎', '🤎', '✅', '🫀', '🧡', '😁', '😄', '🌸', '🕊️', '🌷', '⛅', '🌟', '🗿', '🇵🇰', '💜', '💙', '🌝', '🖤', '💚'];
@@ -157,7 +167,7 @@ async function start() {
                         } catch (err) {
                             if (err.message.includes('rate-overlimit')) {
                                 console.log(chalk.red(`[RATE-LIMIT] Cooling down 10s...`));
-                                await delay(10000); // Stop for 10s if WhatsApp flags us
+                                await delay(10000);
                             }
                         }
                     }
