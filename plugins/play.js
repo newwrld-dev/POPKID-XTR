@@ -15,52 +15,65 @@ const play = async (m, gss) => {
     const text = body.slice(prefix.length + cmd.length).trim();
 
     if (!text) {
-      return m.reply("✨ *Usage:* .play3 [song name]");
+      return m.reply("✨ *Usage:* .play [song name]");
     }
 
-    // Search YouTube
+    // 1. YouTube Search
     const search = await yts(text);
-    if (!search.videos || search.videos.length === 0) {
-      return m.reply("🚫 *No results found.*");
-    }
+    const video = (search && (search.videos && search.videos[0])) || (search.all && search.all[0]);
+    if (!video) return m.reply("🚫 *No results found.*");
 
-    const video = search.videos[0];
-    const urlYt = video.url;
+    const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, "");
+    const fileName = `${safeTitle}.mp3`;
 
-    // Stylish "Found It" message with metadata
+    // 2. Fetch using new API
+    // Note: Ensure BASE_URL is defined or replace it with the direct URL
+    const apiURL = `https://api.diptosapi.workers.dev/dipto/ytDl3?link=${encodeURIComponent(video.url)}&format=mp3`;
+    const { data } = await axios.get(apiURL);
+    
+    if (!data || !data.downloadLink) return m.reply("❌ *Failed to get download link.*");
+
+    // 3. Send exact Image Preview with "View Channel" link
     const infoMsg = `🎧 *TITLE:* ${video.title}\n` +
                     `⏱️ *DURATION:* ${video.timestamp}\n` +
-                    `🔗 *URL:* ${urlYt}\n\n` +
+                    `🔗 *URL:* ${video.url}\n\n` +
                     `_⚡ Fetching high-quality audio..._`;
 
-    await gss.sendMessage(m.from, { 
-      image: { url: video.thumbnail }, 
-      caption: infoMsg 
+    await gss.sendMessage(m.from, {
+      image: { url: video.thumbnail },
+      caption: infoMsg,
+      contextInfo: {
+        externalAdReply: {
+            title: "Popkid-MD",
+            body: "Get more info about this message.",
+            mediaType: 1,
+            sourceUrl: "https://whatsapp.com/channel/0029VaeS6id0VycC9uY09s0F", 
+            renderLargerThumbnail: false
+        }
+      }
     }, { quoted: m });
 
-    // Fetch MP3 from the new API
-    const apiUrl = `https://api.yupra.my.id/api/downloader/ytmp3?url=${encodeURIComponent(urlYt)}`;
-    const response = await axios.get(apiUrl);
-    const result = response.data;
-
-    // Validate the new API response
-    if (!result || !result.success || !result.data?.download_url) {
-      return m.reply("❌ *Error:* The download provider returned an invalid response.");
-    }
-
-    const audioUrl = result.data.download_url; //
-    const fileName = `${result.data.title || 'audio'}.mp3`; //
-
-    // Send the actual Audio file
+    // 4. Send Playable Audio
     await gss.sendMessage(m.from, {
-      audio: { url: audioUrl },
+      audio: { url: data.downloadLink },
       mimetype: "audio/mpeg",
       fileName: fileName,
-      ptt: false // Set to true if you want it to appear as a voice note
+      contextInfo: {
+        externalAdReply: {
+          title: video.title,
+          body: "Popkid-MD Music",
+          mediaType: 1,
+          thumbnailUrl: video.thumbnail,
+          renderLargerThumbnail: false
+        }
+      }
     }, { quoted: m });
 
+    // Success Reaction
+    await gss.sendMessage(m.from, { react: { text: "✅", key: m.key } });
+
   } catch (error) {
-    console.error("PLAY3 ERROR:", error);
+    console.error("PLAY ERROR:", error);
     m.reply("⚠️ *System Error:*\n" + (error.response?.data?.message || error.message));
   }
 };
