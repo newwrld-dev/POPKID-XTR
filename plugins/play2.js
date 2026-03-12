@@ -1,29 +1,36 @@
 import axios from 'axios';
-import yts from 'yt-search';
 import config from '../config.cjs';
 
-const playCmd = async (m, Matrix) => {
+const play2Cmd = async (m, Matrix) => {
   const prefix = config.PREFIX;
   const body = m.body || "";
   const args = body.split(" ");
   const cmd = body.startsWith(prefix) ? args[0].slice(prefix.length).toLowerCase() : "";
   const query = args.slice(1).join(" ");
 
-  if (cmd !== "play2" && cmd !== "song2") return;
+  if (cmd !== "play2") return;
 
   if (!query) {
-    return m.reply(`*ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴘʟᴀʏᴇʀ*\n\nEx: ${prefix}play nandy asante`);
+    return m.reply(`*ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴘʟᴀʏᴇʀ ᴠ2*\n\nEx: ${prefix}play2 Happy Nation`);
   }
 
   try {
-    await Matrix.sendMessage(m.from, { react: { text: "🎵", key: m.key } });
+    // 1. Initial Reaction
+    await Matrix.sendMessage(m.from, { react: { text: "🎶", key: m.key } });
 
-    // 1. YouTube Search
-    const search = await yts(query);
-    const video = search.videos[0];
-    if (!video) return m.reply("❌ No results found.");
+    // 2. Fetch data from Vreden Play API
+    const apiUrl = `https://api.vreden.my.id/api/v1/download/play/audio?query=${encodeURIComponent(query)}`;
+    const response = await axios.get(apiUrl);
+    const data = response.data;
 
-    // 2. Metadata / Context Info
+    if (!data.status || !data.result) {
+      return m.reply("❌ No results found or API is down.");
+    }
+
+    const video = data.result.metadata;
+    const downloadData = data.result.download;
+
+    // 3. Define Popkid XMD Context Info (Ping Style)
     const contextInfo = {
       mentionedJid: [m.sender],
       forwardingScore: 999,
@@ -34,8 +41,8 @@ const playCmd = async (m, Matrix) => {
         serverMessageId: 143
       },
       externalAdReply: {
-        title: "ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴍᴜsɪᴄ",
-        body: `sᴇᴀʀᴄʜɪɴɢ: ${video.title}`,
+        title: "ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴍᴜsɪᴄ ᴠ2",
+        body: `ɴᴏᴡ ᴘʟᴀʏɪɴɢ: ${video.title}`,
         thumbnailUrl: video.thumbnail,
         sourceUrl: "https://whatsapp.com/channel/0029VacgxK96hENmSRMRxx1r",
         mediaType: 1,
@@ -43,35 +50,40 @@ const playCmd = async (m, Matrix) => {
       }
     };
 
-    // 3. Send Initial Info
-    const infoCaption = `*🎶 ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴘʟᴀʏᴇʀ*\n\n` +
-                        `╭───────────────◆\n` +
-                        `│ 📑 *ᴛɪᴛʟᴇ:* ${video.title}\n` +
-                        `│ ⏳ *ᴅᴜʀᴀᴛɪᴏɴ:* ${video.timestamp}\n` +
-                        `│ 👤 *ᴀᴜᴛʜᴏʀ:* ${video.author.name}\n` +
-                        `╰────────────────◆\n\n` +
-                        `_📥 ᴘʀᴇᴘᴀʀɪɴɢ ʏᴏᴜʀ ᴀᴜᴅɪᴏ ꜰɪʟᴇ..._`;
+    // 4. Send Information Message
+    const caption = `*🎶 ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴘʟᴀʏᴇʀ ᴠ2*\n\n` +
+                    `╭───────────────◆\n` +
+                    `│ 📑 *ᴛɪᴛʟᴇ:* ${video.title}\n` +
+                    `│ ⏳ *ᴅᴜʀᴀᴛɪᴏɴ:* ${video.timestamp}\n` +
+                    `│ 👤 *ᴀᴜᴛʜᴏʀ:* ${video.author.name}\n` +
+                    `│ 📅 *ᴘᴜʙʟɪsʜᴇᴅ:* ${video.ago}\n` +
+                    `╰────────────────◆\n\n` +
+                    `_⚡ ᴘʀᴇᴘᴀʀɪɴɢ ʏᴏᴜʀ ᴀᴜᴅɪᴏ..._`;
 
     await Matrix.sendMessage(m.from, {
       image: { url: video.thumbnail },
-      caption: infoCaption,
+      caption: caption,
       contextInfo
     }, { quoted: m });
 
-    // 4. Get Download Link (Vreden API as requested)
-    const apiUrl = `https://api.vreden.my.id/api/v1/download/ytmp3?url=${video.url}`;
-    const apiResponse = await axios.get(apiUrl);
+    // 5. Check if Vreden download is ready, else use fallback
+    let finalUrl = downloadData.url;
 
-    if (!apiResponse.data?.status) {
-      throw new Error("API failed to process video.");
+    if (!downloadData.status || !finalUrl) {
+      console.log("Vreden error detected, attempting fallback...");
+      // Fallback to Noobs API if Vreden conversion fails
+      const fallbackUrl = `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(video.url)}&format=mp3`;
+      const fbRes = await axios.get(fallbackUrl);
+      if (fbRes.data && fbRes.data.downloadLink) {
+        finalUrl = fbRes.data.downloadLink;
+      } else {
+        return m.reply("⚠️ *Error:* Both primary and fallback servers failed to convert this audio.");
+      }
     }
 
-    const downloadUrl = apiResponse.data.result?.url || apiResponse.data.url;
-
-    // 5. Send as Document (Matches the standalone script style)
-    // This allows the file to show up with the actual name and .mp3 extension
+    // 6. Send Audio File as Document (Ping style consistency)
     await Matrix.sendMessage(m.from, {
-      document: { url: downloadUrl },
+      document: { url: finalUrl },
       fileName: `${video.title}.mp3`,
       mimetype: "audio/mpeg",
       contextInfo: {
@@ -80,18 +92,19 @@ const playCmd = async (m, Matrix) => {
           body: "ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴅᴏᴡɴʟᴏᴀᴅᴇʀ",
           mediaType: 1,
           thumbnailUrl: video.thumbnail,
-          renderLargerThumbnail: true // Set to true for a nice big thumbnail
+          renderLargerThumbnail: true
         }
       }
     }, { quoted: m });
 
+    // 7. Success Reaction
     await Matrix.sendMessage(m.from, { react: { text: "✅", key: m.key } });
 
   } catch (error) {
-    console.error("PLAY ERROR:", error);
-    m.reply(`❌ *ᴅᴏᴡɴʟᴏᴀᴅ ꜰᴀɪʟᴇᴅ:* ${error.message}`);
+    console.error("PLAY2 ERROR:", error);
+    m.reply("⚠️ *Error:* System failed to process the request.");
     await Matrix.sendMessage(m.from, { react: { text: "❌", key: m.key } });
   }
 };
 
-export default playCmd;
+export default play2Cmd;
