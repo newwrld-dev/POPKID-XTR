@@ -2,37 +2,40 @@ import axios from 'axios';
 import yts from 'yt-search';
 import config from '../config.cjs';
 
+// Bot Constants for styling
 const NEWSLETTER_JID = "120363423997837331@newsletter";
 const NEWSLETTER_NAME = "POPKID MD";
+const BASE_URL = "https://noobs-api.top";
 
-const play3 = async (m, gss) => {
+const play = async (m, gss) => {
   const prefix = config.PREFIX;
   const body = m.body || "";
   const cmdName = body.startsWith(prefix)
     ? body.slice(prefix.length).split(" ")[0].toLowerCase()
     : "";
 
-  if (cmdName !== "play3") return;
+  if (cmdName !== "play" && cmdName !== "p") return;
 
   const text = body.slice(prefix.length + cmdName.length).trim();
-  if (!text) return m.reply("✨ *Usage:* .play3 [song name]");
+  if (!text) return m.reply("✨ *Usage:* .play [song name]");
 
   try {
-    // 1. YouTube Search for Meta
+    // 1. Search YouTube
     const search = await yts(text);
     const video = search.videos[0];
     if (!video) return m.reply("🚫 *No results found.*");
 
     const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, "");
+    
+    // 2. Build the Stylish Caption
+    const infoMsg = `🎶 *POPKID MD PLAYER*\n\n` +
+                    `╭───────────────◆\n` +
+                    `│ 📑 Title: ${video.title}\n` +
+                    `│ ⏳ Duration: ${video.timestamp}\n` +
+                    `╰────────────────◆\n\n` +
+                    `⏳ *Sending audio...*`;
 
-    // 2. Stylish Caption
-    const infoMsg = `🎶 *POPKID MD SPOTIFY PLAYER*\n\n` +
-                    `╭───╼━━━━━━━━━━━━╾───╮\n` +
-                    `  📑 Title: ${video.title}\n` +
-                    `  ⏳ Duration: ${video.timestamp}\n` +
-                    `╰───╼━━━━━━━━━━━━╾───╯\n\n` +
-                    `🎧 *Fetching Spotify stream...*`;
-
+    // 3. Send Thumbnail with Newsletter Context
     await gss.sendMessage(m.from, { 
       image: { url: video.thumbnail }, 
       caption: infoMsg,
@@ -46,7 +49,7 @@ const play3 = async (m, gss) => {
         },
         externalAdReply: {
             title: NEWSLETTER_NAME,
-            body: "Powered by Popkid-MD",
+            body: "Get more info about this message.",
             mediaType: 1,
             sourceUrl: "https://whatsapp.com/channel/0029VaeS6id0VycC9uY09s0F",
             renderLargerThumbnail: false
@@ -54,29 +57,24 @@ const play3 = async (m, gss) => {
       }
     }, { quoted: m });
 
-    // 3. Search and Download from Spotify
-    // Using the search endpoint first to avoid the 400 error
-    const searchUrl = `https://api.yupra.my.id/api/downloader/spotify?query=${encodeURIComponent(text)}`;
-    const response = await axios.get(searchUrl);
-    const result = response.data;
+    // 4. Fetch MP3 using the working Noobs API
+    const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.url)}&format=mp3`;
+    const { data } = await axios.get(apiURL);
 
-    if (!result || !result.status || !result.result?.download?.url) {
-       // Fallback: If Spotify fails, we can't send audio
-       return m.reply("❌ *Spotify Error:* Could not find a downloadable version of this track.");
+    if (!data || !data.downloadLink) {
+      return m.reply("❌ *Error:* Failed to get download link from the provider.");
     }
 
-    const audioUrl = result.result.download.url;
-
-    // 4. Send the Audio File
+    // 5. Send Playable Audio with Ad Reply
     await gss.sendMessage(m.from, {
-      audio: { url: audioUrl },
+      audio: { url: data.downloadLink },
       mimetype: "audio/mpeg",
       fileName: `${safeTitle}.mp3`,
       ptt: false,
       contextInfo: {
         externalAdReply: {
-          title: result.result.title || video.title,
-          body: `Artist: ${result.result.artist || 'Unknown'}`,
+          title: video.title,
+          body: "Popkid-MD Music",
           mediaType: 1,
           thumbnailUrl: video.thumbnail,
           renderLargerThumbnail: false
@@ -84,14 +82,13 @@ const play3 = async (m, gss) => {
       }
     }, { quoted: m });
 
-    await gss.sendMessage(m.from, { react: { text: "🎧", key: m.key } });
+    // Success Reaction
+    await gss.sendMessage(m.from, { react: { text: "✅", key: m.key } });
 
   } catch (error) {
-    console.error("PLAY3 ERROR:", error);
-    // Detailed error reporting
-    const errorMsg = error.response?.data?.message || error.message;
-    m.reply(`⚠️ *Spotify API Error:* ${errorMsg}\n\n_Tip: If search fails, try pasting the direct Spotify link._`);
+    console.error("PLAY ERROR:", error);
+    m.reply("⚠️ *System Error:* " + (error.response?.data?.message || error.message));
   }
 };
 
-export default play3;
+export default play;
