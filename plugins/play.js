@@ -2,62 +2,75 @@ import axios from 'axios';
 import yts from 'yt-search';
 import config from '../config.cjs';
 
+// Bot Constants for styling
+const NEWSLETTER_JID = "120363423997837331@newsletter";
+const NEWSLETTER_NAME = "POPKID MD";
+const BASE_URL = "https://noobs-api.top";
+
 const play = async (m, gss) => {
   const prefix = config.PREFIX;
   const body = m.body || "";
-  const cmd = body.startsWith(prefix)
+  const cmdName = body.startsWith(prefix)
     ? body.slice(prefix.length).split(" ")[0].toLowerCase()
     : "";
 
-  if (cmd !== "play") return;
+  if (cmdName !== "play" && cmdName !== "p") return;
+
+  const text = body.slice(prefix.length + cmdName.length).trim();
+  if (!text) return m.reply("✨ *Usage:* .play [song name]");
 
   try {
-    const text = body.slice(prefix.length + cmd.length).trim();
-
-    if (!text) {
-      return m.reply("✨ *Usage:* .play [song name]");
-    }
-
-    // 1. YouTube Search
+    // 1. Search YouTube
     const search = await yts(text);
-    const video = (search && (search.videos && search.videos[0])) || (search.all && search.all[0]);
+    const video = search.videos[0];
     if (!video) return m.reply("🚫 *No results found.*");
 
     const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, "");
-    const fileName = `${safeTitle}.mp3`;
-
-    // 2. Fetch using new API
-    // Note: Ensure BASE_URL is defined or replace it with the direct URL
-    const apiURL = `https://api.diptosapi.workers.dev/dipto/ytDl3?link=${encodeURIComponent(video.url)}&format=mp3`;
-    const { data } = await axios.get(apiURL);
     
-    if (!data || !data.downloadLink) return m.reply("❌ *Failed to get download link.*");
+    // 2. Build the Stylish Caption
+    const infoMsg = `🎶 *POPKID MD PLAYER*\n\n` +
+                    `╭───────────────◆\n` +
+                    `│ 📑 Title: ${video.title}\n` +
+                    `│ ⏳ Duration: ${video.timestamp}\n` +
+                    `╰────────────────◆\n\n` +
+                    `⏳ *Sending audio...*`;
 
-    // 3. Send exact Image Preview with "View Channel" link
-    const infoMsg = `🎧 *TITLE:* ${video.title}\n` +
-                    `⏱️ *DURATION:* ${video.timestamp}\n` +
-                    `🔗 *URL:* ${video.url}\n\n` +
-                    `_⚡ Fetching high-quality audio..._`;
-
-    await gss.sendMessage(m.from, {
-      image: { url: video.thumbnail },
+    // 3. Send Thumbnail with Newsletter Context
+    await gss.sendMessage(m.from, { 
+      image: { url: video.thumbnail }, 
       caption: infoMsg,
       contextInfo: {
+        forwardingScore: 999,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: NEWSLETTER_JID,
+          newsletterName: NEWSLETTER_NAME,
+          serverMessageId: -1
+        },
         externalAdReply: {
-            title: "Popkid-MD",
+            title: NEWSLETTER_NAME,
             body: "Get more info about this message.",
             mediaType: 1,
-            sourceUrl: "https://whatsapp.com/channel/0029VaeS6id0VycC9uY09s0F", 
+            sourceUrl: "https://whatsapp.com/channel/0029VaeS6id0VycC9uY09s0F",
             renderLargerThumbnail: false
         }
       }
     }, { quoted: m });
 
-    // 4. Send Playable Audio
+    // 4. Fetch MP3 using the working Noobs API
+    const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.url)}&format=mp3`;
+    const { data } = await axios.get(apiURL);
+
+    if (!data || !data.downloadLink) {
+      return m.reply("❌ *Error:* Failed to get download link from the provider.");
+    }
+
+    // 5. Send Playable Audio with Ad Reply
     await gss.sendMessage(m.from, {
       audio: { url: data.downloadLink },
       mimetype: "audio/mpeg",
-      fileName: fileName,
+      fileName: `${safeTitle}.mp3`,
+      ptt: false,
       contextInfo: {
         externalAdReply: {
           title: video.title,
@@ -74,7 +87,7 @@ const play = async (m, gss) => {
 
   } catch (error) {
     console.error("PLAY ERROR:", error);
-    m.reply("⚠️ *System Error:*\n" + (error.response?.data?.message || error.message));
+    m.reply("⚠️ *System Error:* " + (error.response?.data?.message || error.message));
   }
 };
 
