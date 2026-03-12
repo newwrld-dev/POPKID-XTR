@@ -12,7 +12,7 @@ const play3 = async (m, gss) => {
     ? body.slice(prefix.length).split(" ")[0].toLowerCase()
     : "";
 
-  if (cmdName !== "play3") return;
+  if (cmdName !== "play") return;
 
   const text = body.slice(prefix.length + cmdName.length).trim();
   if (!text) return m.reply("✨ *Usage:* .play3 [song name]");
