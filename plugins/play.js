@@ -4,37 +4,36 @@ import config from '../config.cjs';
 
 const NEWSLETTER_JID = "120363423997837331@newsletter";
 const NEWSLETTER_NAME = "POPKID MD";
-const BASE_URL = "https://noobs-api.top";
 
-const play = async (m, gss) => {
+const play3 = async (m, gss) => {
   const prefix = config.PREFIX;
   const body = m.body || "";
   const cmdName = body.startsWith(prefix)
     ? body.slice(prefix.length).split(" ")[0].toLowerCase()
     : "";
 
-  if (cmdName !== "play" && cmdName !== "p") return;
+  if (cmdName !== "play3") return;
 
   const text = body.slice(prefix.length + cmdName.length).trim();
-  if (!text) return m.reply("✨ *Usage:* .play [song name]");
+  if (!text) return m.reply("✨ *Usage:* .play3 [song name]");
 
   try {
-    // 1. YouTube Search
+    // 1. Search YouTube for metadata/thumbnail
     const search = await yts(text);
     const video = search.videos[0];
     if (!video) return m.reply("🚫 *No results found.*");
 
     const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, "");
-    
-    // 2. Build the Stylish Caption (Exact match to your screenshot)
-    const infoMsg = `🎶 *POPKID MD PLAYER*\n\n` +
+
+    // 2. Build the Stylish Caption
+    const infoMsg = `🎶 *POPKID MD SPOTIFY PLAYER*\n\n` +
                     `╭───╼━━━━━━━━━━━━╾───╮\n` +
-                    `  📄 Title: ${video.title}\n` +
+                    `  📑 Title: ${video.title}\n` +
                     `  ⏳ Duration: ${video.timestamp}\n` +
                     `╰───╼━━━━━━━━━━━━╾───╯\n\n` +
-                    `⏳ *Sending audio...*`;
+                    `🎧 *Fetching Spotify stream...*`;
 
-    // 3. Send Thumbnail with Newsletter Context
+    // 3. Send Preview Image
     await gss.sendMessage(m.from, { 
       image: { url: video.thumbnail }, 
       caption: infoMsg,
@@ -48,7 +47,7 @@ const play = async (m, gss) => {
         },
         externalAdReply: {
             title: NEWSLETTER_NAME,
-            body: "Get more info about this message.",
+            body: "Powered by YP INC / Spotidown",
             mediaType: 1,
             sourceUrl: "https://whatsapp.com/channel/0029VaeS6id0VycC9uY09s0F",
             renderLargerThumbnail: false
@@ -56,27 +55,30 @@ const play = async (m, gss) => {
       }
     }, { quoted: m });
 
-    // 4. Fetch MP3 - Robust link checking
-    const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.url)}&format=mp3`;
-    const res = await axios.get(apiURL);
-    
-    // Check all possible locations for the download link
-    const downloadUrl = res.data?.downloadLink || res.data?.result?.downloadLink || res.data?.url;
+    /** * 4. Fetch Audio from Spotidown API
+     * Note: We use the search query to find the best match on their server
+     */
+    const apiUrl = `https://api.yupra.my.id/api/downloader/spotify?query=${encodeURIComponent(text)}`;
+    const { data } = await axios.get(apiUrl);
 
-    if (!downloadUrl) {
-      return m.reply("❌ *Error:* The API failed to provide a download link. Please try again later.");
+    // Targeted check based on your provided JSON structure
+    if (!data || !data.status || !data.result?.download?.url) {
+      return m.reply("❌ *Error:* Spotify downloader failed to find this track.");
     }
 
-    // 5. Send Playable Audio with internal metadata
+    const audioUrl = data.result.download.url;
+    const artistName = data.result.artist || "Popkid Artist";
+
+    // 5. Send the Audio File
     await gss.sendMessage(m.from, {
-      audio: { url: downloadUrl },
+      audio: { url: audioUrl },
       mimetype: "audio/mpeg",
       fileName: `${safeTitle}.mp3`,
       ptt: false,
       contextInfo: {
         externalAdReply: {
-          title: video.title,
-          body: "Popkid-MD Music",
+          title: data.result.title || video.title,
+          body: `Artist: ${artistName}`,
           mediaType: 1,
           thumbnailUrl: video.thumbnail,
           renderLargerThumbnail: false
@@ -84,13 +86,13 @@ const play = async (m, gss) => {
       }
     }, { quoted: m });
 
-    // 6. Final Success Reaction
-    await gss.sendMessage(m.from, { react: { text: "✅", key: m.key } });
+    // Success Reaction
+    await gss.sendMessage(m.from, { react: { text: "🎧", key: m.key } });
 
   } catch (error) {
-    console.error("PLAY ERROR:", error);
-    m.reply("⚠️ *System Error:* " + (error.response?.data?.message || error.message));
+    console.error("PLAY3 ERROR:", error);
+    m.reply("⚠️ *Spotify API Error:* " + (error.response?.data?.message || error.message));
   }
 };
 
-export default play;
+export default play3;
