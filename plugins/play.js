@@ -2,93 +2,80 @@ import axios from 'axios';
 import yts from 'yt-search';
 import config from '../config.cjs';
 
-// Exact Newsletter and Bot Info from your working script
-const NEWSLETTER_JID = "120363423997837331@newsletter";
-const NEWSLETTER_NAME = "POPKID MD";
-const BOT = "POPKID-MD";
-const BASE_URL = "https://noobs-api.top";
-
-// Exact buildCaption function from your script
-const buildCaption = (type, video) => {
-  const banner = type === "video" ? `🎬 POPKID MD VIDEO PLAYER` : `🎶 POPKID MD PLAYER`;
-  const duration = video.timestamp || video.duration || "N/A";
-
-  return (
-    `*${banner}*\n\n` +
-    `╭───────────────◆\n` +
-    `│ 📑 Title: ${video.title}\n` +
-    `│ ⏳ Duration: ${duration}\n` +
-    `╰────────────────◆\n\n` +
-    `⏳ *Sending audio...*`
-  );
-};
-
-// Exact getContextInfo function from your script
-const getContextInfo = (query = "") => ({
-  forwardingScore: 999,
-  isForwarded: true,
-  forwardedNewsletterMessageInfo: {
-    newsletterJid: NEWSLETTER_JID,
-    newsletterName: NEWSLETTER_NAME,
-    serverMessageId: -1
-  },
-  body: query ? `Requested: ${query}` : undefined,
-  title: BOT
-});
-
-const play = async (m, gss) => {
+const playCmd = async (m, Matrix) => {
   const prefix = config.PREFIX;
   const body = m.body || "";
-  const cmdName = body.startsWith(prefix)
-    ? body.slice(prefix.length).split(" ")[0].toLowerCase()
-    : "";
+  const args = body.split(" ");
+  const cmd = body.startsWith(prefix) ? args[0].slice(prefix.length).toLowerCase() : "";
+  const query = args.slice(1).join(" ");
 
-  // Support both "play" and "p" as per your pattern/alias
-  if (cmdName !== "play" && cmdName !== "p") return;
+  if (cmd !== "play" && cmd !== "song") return;
 
-  const query = body.slice(prefix.length + cmdName.length).trim();
-  if (!query) return m.reply("Please provide a song name.");
+  if (!query) {
+    return m.reply(`*ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴘʟᴀʏᴇʀ*\n\nEx: ${prefix}play Shape of You`);
+  }
 
   try {
-    // 1. YouTube Search (using your logic)
+    // 1. React to show processing
+    await Matrix.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
+
+    // 2. Search YouTube
     const search = await yts(query);
-    const video = (search && (search.videos && search.videos[0])) || (search.all && search.all[0]);
-    if (!video) return m.reply("No results found.");
+    const video = search.videos[0];
+    if (!video) return m.reply("❌ No results found.");
 
-    const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, "");
-    const fileName = `${safeTitle}.mp3`;
-    
-    // 2. Fetch using working API (using your exact logic)
-    const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.videoId || video.url)}&format=mp3`;
-    const { data } = await axios.get(apiURL);
-    
-    if (!data || !data.downloadLink) return m.reply("Failed to get download link.");
-
-    // 3. Send exact Image Preview with "View Channel" link
-    await gss.sendMessage(m.from, {
-      image: { url: video.thumbnail },
-      caption: buildCaption("audio", video),
-      contextInfo: {
-        ...getContextInfo(query),
-        externalAdReply: {
-            title: NEWSLETTER_NAME,
-            body: "Get more info about this message.",
-            mediaType: 1,
-            sourceUrl: "https://whatsapp.com/channel/0029VaeS6id0VycC9uY09s0F", 
-            renderLargerThumbnail: false
-        }
+    // 3. Define Context Info (Matching your Ping Style)
+    const contextInfo = {
+      mentionedJid: [m.sender],
+      forwardingScore: 999,
+      isForwarded: true,
+      forwardedNewsletterMessageInfo: {
+        newsletterJid: '120363289379419860@newsletter',
+        newsletterName: "ᴘᴏᴘᴋɪᴅ ᴜᴘᴅᴀᴛᴇs",
+        serverMessageId: 143
+      },
+      externalAdReply: {
+        title: "ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴍᴜsɪᴄ",
+        body: `ɴᴏᴡ ᴘʟᴀʏɪɴɢ: ${video.title}`,
+        thumbnailUrl: video.thumbnail,
+        sourceUrl: "https://whatsapp.com/channel/0029VacgxK96hENmSRMRxx1r",
+        mediaType: 1,
+        renderLargerThumbnail: false
       }
+    };
+
+    // 4. Send Thumbnail + Info (Caption style from your reference)
+    const caption = `*🎶 ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴘʟᴀʏᴇʀ*\n\n` +
+                    `╭───────────────◆\n` +
+                    `│ 📑 *ᴛɪᴛʟᴇ:* ${video.title}\n` +
+                    `│ ⏳ *ᴅᴜʀᴀᴛɪᴏɴ:* ${video.timestamp}\n` +
+                    `│ 👤 *ᴀᴜᴛʜᴏʀ:* ${video.author.name}\n` +
+                    `╰────────────────◆\n\n` +
+                    `_⚡ ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ᴀᴜᴅɪᴏ..._`;
+
+    await Matrix.sendMessage(m.from, {
+      image: { url: video.thumbnail },
+      caption: caption,
+      contextInfo
     }, { quoted: m });
 
-    // 4. Send Playable Audio
-    await gss.sendMessage(m.from, {
+    // 5. Fetch Audio from API
+    const apiURL = `https://noobs-api.top/dipto/ytDl3?link=${encodeURIComponent(video.url)}&format=mp3`;
+    const { data } = await axios.get(apiURL);
+
+    if (!data || !data.downloadLink) {
+      return m.reply("⚠️ Failed to fetch download link from server.");
+    }
+
+    // 6. Send Audio File
+    await Matrix.sendMessage(m.from, {
       audio: { url: data.downloadLink },
-      mimetype: "audio/mpeg",
-      fileName: fileName,
+      mimetype: 'audio/mpeg',
+      fileName: `${video.title}.mp3`,
       contextInfo: {
         externalAdReply: {
           title: video.title,
-          body: "Popkid-MD Music",
+          body: "ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴀᴜᴅɪᴏ",
           mediaType: 1,
           thumbnailUrl: video.thumbnail,
           renderLargerThumbnail: false
@@ -96,13 +83,13 @@ const play = async (m, gss) => {
       }
     }, { quoted: m });
 
-    // Success Reaction
-    await gss.sendMessage(m.from, { react: { text: "✅", key: m.key } });
+    // 7. Final Success Reaction
+    await Matrix.sendMessage(m.from, { react: { text: "✅", key: m.key } });
 
-  } catch (e) {
-    console.error("[PLAY ERROR]", e);
-    m.reply("An error occurred while processing your request.");
+  } catch (error) {
+    console.error("PLAY ERROR:", error);
+    m.reply("⚠️ *Error:* Musical playback failed.");
   }
 };
 
-export default play;
+export default playCmd;
