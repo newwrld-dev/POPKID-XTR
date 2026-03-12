@@ -23,6 +23,8 @@ const play2 = async (m, gss) => {
     const video = search.videos[0];
     if (!video) return m.reply("🚫 *No results found.*");
 
+    const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, "");
+
     // 2. Build the Stylish Caption
     const infoMsg = `🎶 *POPKID MD PLAYER v2*\n\n` +
                     `╭───╼━━━━━━━━━━━━╾───╮\n` +
@@ -45,7 +47,7 @@ const play2 = async (m, gss) => {
         },
         externalAdReply: {
             title: NEWSLETTER_NAME,
-            body: "Powered by GiftedTech API",
+            body: "Powered by GiftedTech",
             mediaType: 1,
             sourceUrl: "https://whatsapp.com/channel/0029VaeS6id0VycC9uY09s0F",
             renderLargerThumbnail: false
@@ -53,23 +55,21 @@ const play2 = async (m, gss) => {
       }
     }, { quoted: m });
 
-    // 4. Fetch MP3 from GiftedTech API
-    // We use the video ID to query their downloader
-    const apiUrl = `https://api.giftedtech.co.ke/api/download/ytmp3?url=${encodeURIComponent(video.url)}`;
+    // 4. Fetch MP3 using the registered API Key (apikey=gifted)
+    const apiUrl = `https://api.giftedtech.co.ke/api/download/dlmp3?apikey=gifted&url=${encodeURIComponent(video.url)}`;
     const { data } = await axios.get(apiUrl);
 
     if (!data || !data.success || !data.result?.download_url) {
-      return m.reply("❌ *Error:* GiftedTech API failed to process this request.");
+      return m.reply("❌ *Error:* API failed to generate a download link.");
     }
 
     const audioUrl = data.result.download_url;
-    const fileName = `${video.title.replace(/[\\/:*?"<>|]/g, "")}.mp3`;
 
     // 5. Send the Audio File
     await gss.sendMessage(m.from, {
       audio: { url: audioUrl },
       mimetype: "audio/mpeg",
-      fileName: fileName,
+      fileName: `${safeTitle}.mp3`,
       ptt: false,
       contextInfo: {
         externalAdReply: {
@@ -82,8 +82,8 @@ const play2 = async (m, gss) => {
       }
     }, { quoted: m });
 
-    // Reaction for success
-    await gss.sendMessage(m.from, { react: { text: "📥", key: m.key } });
+    // Success Reaction
+    await gss.sendMessage(m.from, { react: { text: "✅", key: m.key } });
 
   } catch (error) {
     console.error("PLAY2 ERROR:", error);
