@@ -13,7 +13,7 @@
   "author": "POPKID-XMD",
   "license": "ISC",
   "dependencies": {
-    "@whiskeysockets/baileys": "npm:xmd-baileys@latest",
+    "@whiskeysockets/baileys": "github:Mayelprince/Prince-bailey",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google/generative-ai": "^0.9.0",
     "@hapi/boom": "^10.0.1",
