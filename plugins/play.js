@@ -2,7 +2,6 @@ import axios from 'axios';
 import yts from 'yt-search';
 import config from '../config.cjs';
 
-// Bot Constants for styling
 const NEWSLETTER_JID = "120363423997837331@newsletter";
 const NEWSLETTER_NAME = "POPKID MD";
 const BASE_URL = "https://noobs-api.top";
@@ -20,19 +19,19 @@ const play = async (m, gss) => {
   if (!text) return m.reply("✨ *Usage:* .play [song name]");
 
   try {
-    // 1. Search YouTube
+    // 1. YouTube Search
     const search = await yts(text);
     const video = search.videos[0];
     if (!video) return m.reply("🚫 *No results found.*");
 
     const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, "");
     
-    // 2. Build the Stylish Caption
+    // 2. Build the Stylish Caption (Exact match to your screenshot)
     const infoMsg = `🎶 *POPKID MD PLAYER*\n\n` +
-                    `╭───────────────◆\n` +
-                    `│ 📑 Title: ${video.title}\n` +
-                    `│ ⏳ Duration: ${video.timestamp}\n` +
-                    `╰────────────────◆\n\n` +
+                    `╭───╼━━━━━━━━━━━━╾───╮\n` +
+                    `  📄 Title: ${video.title}\n` +
+                    `  ⏳ Duration: ${video.timestamp}\n` +
+                    `╰───╼━━━━━━━━━━━━╾───╯\n\n` +
                     `⏳ *Sending audio...*`;
 
     // 3. Send Thumbnail with Newsletter Context
@@ -57,17 +56,20 @@ const play = async (m, gss) => {
       }
     }, { quoted: m });
 
-    // 4. Fetch MP3 using the working Noobs API
+    // 4. Fetch MP3 - Robust link checking
     const apiURL = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(video.url)}&format=mp3`;
-    const { data } = await axios.get(apiURL);
+    const res = await axios.get(apiURL);
+    
+    // Check all possible locations for the download link
+    const downloadUrl = res.data?.downloadLink || res.data?.result?.downloadLink || res.data?.url;
 
-    if (!data || !data.downloadLink) {
-      return m.reply("❌ *Error:* Failed to get download link from the provider.");
+    if (!downloadUrl) {
+      return m.reply("❌ *Error:* The API failed to provide a download link. Please try again later.");
     }
 
-    // 5. Send Playable Audio with Ad Reply
+    // 5. Send Playable Audio with internal metadata
     await gss.sendMessage(m.from, {
-      audio: { url: data.downloadLink },
+      audio: { url: downloadUrl },
       mimetype: "audio/mpeg",
       fileName: `${safeTitle}.mp3`,
       ptt: false,
@@ -82,7 +84,7 @@ const play = async (m, gss) => {
       }
     }, { quoted: m });
 
-    // Success Reaction
+    // 6. Final Success Reaction
     await gss.sendMessage(m.from, { react: { text: "✅", key: m.key } });
 
   } catch (error) {
