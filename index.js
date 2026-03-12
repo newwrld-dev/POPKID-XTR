@@ -35,7 +35,6 @@ const isEnabled = (val) => {
 };
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
-const logger = pino({ level: "silent" });
 
 // --- PATHS ---
 const __filename = new URL(import.meta.url).pathname;
@@ -86,24 +85,20 @@ async function start() {
             
             if (connection === 'close') {
                 const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-                console.log(chalk.red(`Connection closed. Reconnecting: ${shouldReconnect}`));
                 if (shouldReconnect) start();
             } else if (connection === 'open') {
                 if (initialConnection) {
-                    console.log(chalk.green("Connected Successfully Popkid Bot ❤️"));
+                    console.log(chalk.green(`Connected Successfully ${config.BOT_NAME} ❤️`));
 
                     // Auto-Follow Channel
                     const channelJid = "120363289379419860@newsletter";
-                    try {
-                        await Matrix.newsletterFollow(channelJid);
-                        console.log(chalk.blue(`[AUTO-FOLLOW] Joined: ${channelJid}`));
-                    } catch (e) {}
+                    try { await Matrix.newsletterFollow(channelJid); } catch (e) {}
 
                     // Success Notification
                     const myId = jidNormalizedUser(Matrix.user.id);
                     await Matrix.sendMessage(myId, { 
                         image: { url: "https://files.catbox.moe/kiy0hl.jpg" }, 
-                        caption: `\n\nHELLO POPKID-MD USER (${Matrix.user.name || 'User'})\n\n╔════════════════╗\n║ 🤖 CONNECTED\n╠════════════════╣\n║ 🔑 PREFIX : ${config.PREFIX}\n║ 👨‍💻 DEV : POPKID-MD\n╚════════════════╝`
+                        caption: `\n\nHELLO ${config.BOT_NAME} USER (${Matrix.user.name || 'User'})\n\n╔════════════════╗\n║ 🤖 CONNECTED\n╠════════════════╣\n║ 🔑 PREFIX : ${config.PREFIX}\n║ 👨‍💻 DEV : ${config.OWNER_NAME}\n╚════════════════╝`
                     });
                     initialConnection = false;
                 }
@@ -121,8 +116,7 @@ async function start() {
         // --- MESSAGE LISTENER ---
         Matrix.ev.on('messages.upsert', async (chatUpdate) => {
             try {
-                // Command Handler
-                await Handler(chatUpdate, Matrix, logger);
+                await Handler(chatUpdate, Matrix, pino({ level: 'silent' }));
 
                 const mek = chatUpdate.messages[0];
                 if (!mek || !mek.message) return;
@@ -133,15 +127,17 @@ async function start() {
                 // --- STATUS (STORY) AUTOMATION ---
                 if (remoteJid === 'status@broadcast') {
                     try {
-                        const shouldRead = isEnabled(config.AUTO_READ_STATUS) || isEnabled(config.AUTO_STATUS_SEEN) || isEnabled(process.env.AUTO_READ_STATUS);
-                        const shouldReact = isEnabled(config.AUTO_REACT_STATUS) || isEnabled(process.env.AUTO_STATUS_REACT);
-                        const shouldReply = isEnabled(process.env.AUTO_STATUS_REPLY);
+                        // Matching your config.cjs exact keys
+                        const shouldRead = isEnabled(config.AUTO_STATUS_SEEN);
+                        const shouldReact = isEnabled(config.AUTO_STATUS_REACT);
+                        const shouldReply = isEnabled(config.AUTO_REPLY_STATUS);
 
                         const statusParticipant = mek.key.participant || null;
 
                         if (statusParticipant) {
-                            // Resolve LID -> Real JID Logic
                             let realJid = statusParticipant;
+                            
+                            // 1. Resolve LID -> JID
                             if (statusParticipant.endsWith('@lid')) {
                                 const rawPn = mek.key?.participantPn || mek.key?.senderPn;
                                 if (rawPn) {
@@ -157,43 +153,34 @@ async function start() {
                             const resolvedKey = { ...mek.key, participant: realJid };
                             const statusType = getContentType(mek.message) || 'unknown';
 
-                            // 1. Auto View
-                            if (shouldRead || shouldReact) {
+                            // 2. Auto View Status
+                            if (shouldRead) {
                                 await Matrix.readMessages([resolvedKey]);
                                 console.log(chalk.cyan(`[VIEWED] Status from: ${realJid}`));
                             }
 
-                            // 2. Auto React
-                            const reactableTypes = ['imageMessage', 'videoMessage', 'extendedTextMessage', 'conversation', 'audioMessage', 'documentMessage', 'stickerMessage', 'contactMessage', 'locationMessage'];
-                            
+                            // 3. Auto Status Reaction
+                            const reactableTypes = ['imageMessage', 'videoMessage', 'extendedTextMessage', 'conversation'];
                             if (shouldReact && reactableTypes.includes(statusType)) {
-                                // Prevent Spam/Rate Limit
-                                await delay(Math.floor(Math.random() * 2000) + 1000); 
-
-                                const statusEmojis = ['🧩', '🍉', '💜', '🌸', '🪴', '💊', '💫', '🍂', '🌟', '🎋', '😶‍🌫️', '🫀', '🧿', '👀', '🤖', '🚩', '🥰', '🗿', '💜', '💙', '🌝', '🖤', '💚'];
+                                await delay(2500); // Natural delay
+                                const statusEmojis = ['🧩', '🍉', '💜', '🌸', '🪴', '💊', '💫', '🍂', '🌟', '🎋', '🫀', '🧿', '👀', '🤖', '🚩', '🥰', '🗿'];
                                 const randomEmoji = statusEmojis[Math.floor(Math.random() * statusEmojis.length)];
                                 
-                                try {
-                                    await Matrix.sendMessage(remoteJid, {
-                                        react: { key: resolvedKey, text: randomEmoji }
-                                    }, { 
-                                        statusJidList: [realJid, myId] 
-                                    });
-                                } catch (err) {
-                                    if (err.message.includes('rate-overlimit')) {
-                                        await delay(5000);
-                                    }
-                                }
+                                await Matrix.sendMessage(remoteJid, {
+                                    react: { key: resolvedKey, text: randomEmoji }
+                                }, { 
+                                    statusJidList: [realJid, myId] 
+                                });
                             }
 
-                            // 3. Auto Status Reply
+                            // 4. Auto Status Reply (Using your custom message)
                             if (shouldReply) {
-                                const replyMsg = process.env.STATUS_READ_MSG || config.STATUS_READ_MSG || "Seen by Popkid-MD";
-                                await Matrix.sendMessage(realJid, { text: replyMsg }, { quoted: mek });
+                                const replyText = config.STATUS_READ_MSG || "Status Seen by Popkid-MD";
+                                await Matrix.sendMessage(realJid, { text: replyText }, { quoted: mek });
                             }
                         }
                     } catch (e) {
-                        console.log(chalk.red("Status Auto-Error: "), e.message);
+                        console.error("Status Logic Error:", e.message);
                     }
 
                 } else {
@@ -205,12 +192,11 @@ async function start() {
                 }
 
             } catch (err) {
-                console.error(chalk.red('Error in Master Listener:'), err.message);
+                console.error(chalk.red('Master Listener Error:'), err.message);
             }
         });
 
     } catch (error) {
-        console.error('Critical Error:', error);
         process.exit(1);
     }
 }
@@ -221,17 +207,12 @@ async function init() {
         await start();
     } else {
         const loaded = await loadGiftedSession();
-        if (loaded) {
-            await start();
-        } else {
-            useQR = true;
-            await start();
-        }
+        loaded ? await start() : (useQR = true, await start());
     }
 }
 
 init();
 
 // --- WEB SERVER ---
-app.get('/', (req, res) => res.send('POPKID-MD Active'));
-app.listen(PORT, () => console.log(chalk.yellow(`Web Server started on port ${PORT}`)));
+app.get('/', (req, res) => res.send(`${config.BOT_NAME} is Active`));
+app.listen(PORT, () => console.log(chalk.yellow(`Server running on port ${PORT}`)));
