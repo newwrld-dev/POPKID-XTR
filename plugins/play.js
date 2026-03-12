@@ -12,20 +12,20 @@ const play3 = async (m, gss) => {
     ? body.slice(prefix.length).split(" ")[0].toLowerCase()
     : "";
 
-  if (cmdName !== "play") return;
+  if (cmdName !== "play3") return;
 
   const text = body.slice(prefix.length + cmdName.length).trim();
   if (!text) return m.reply("✨ *Usage:* .play3 [song name]");
 
   try {
-    // 1. Search YouTube for metadata/thumbnail
+    // 1. YouTube Search for Meta
     const search = await yts(text);
     const video = search.videos[0];
     if (!video) return m.reply("🚫 *No results found.*");
 
     const safeTitle = video.title.replace(/[\\/:*?"<>|]/g, "");
 
-    // 2. Build the Stylish Caption
+    // 2. Stylish Caption
     const infoMsg = `🎶 *POPKID MD SPOTIFY PLAYER*\n\n` +
                     `╭───╼━━━━━━━━━━━━╾───╮\n` +
                     `  📑 Title: ${video.title}\n` +
@@ -33,7 +33,6 @@ const play3 = async (m, gss) => {
                     `╰───╼━━━━━━━━━━━━╾───╯\n\n` +
                     `🎧 *Fetching Spotify stream...*`;
 
-    // 3. Send Preview Image
     await gss.sendMessage(m.from, { 
       image: { url: video.thumbnail }, 
       caption: infoMsg,
@@ -47,7 +46,7 @@ const play3 = async (m, gss) => {
         },
         externalAdReply: {
             title: NEWSLETTER_NAME,
-            body: "Powered by YP INC / Spotidown",
+            body: "Powered by Popkid-MD",
             mediaType: 1,
             sourceUrl: "https://whatsapp.com/channel/0029VaeS6id0VycC9uY09s0F",
             renderLargerThumbnail: false
@@ -55,21 +54,20 @@ const play3 = async (m, gss) => {
       }
     }, { quoted: m });
 
-    /** * 4. Fetch Audio from Spotidown API
-     * Note: We use the search query to find the best match on their server
-     */
-    const apiUrl = `https://api.yupra.my.id/api/downloader/spotify?query=${encodeURIComponent(text)}`;
-    const { data } = await axios.get(apiUrl);
+    // 3. Search and Download from Spotify
+    // Using the search endpoint first to avoid the 400 error
+    const searchUrl = `https://api.yupra.my.id/api/downloader/spotify?query=${encodeURIComponent(text)}`;
+    const response = await axios.get(searchUrl);
+    const result = response.data;
 
-    // Targeted check based on your provided JSON structure
-    if (!data || !data.status || !data.result?.download?.url) {
-      return m.reply("❌ *Error:* Spotify downloader failed to find this track.");
+    if (!result || !result.status || !result.result?.download?.url) {
+       // Fallback: If Spotify fails, we can't send audio
+       return m.reply("❌ *Spotify Error:* Could not find a downloadable version of this track.");
     }
 
-    const audioUrl = data.result.download.url;
-    const artistName = data.result.artist || "Popkid Artist";
+    const audioUrl = result.result.download.url;
 
-    // 5. Send the Audio File
+    // 4. Send the Audio File
     await gss.sendMessage(m.from, {
       audio: { url: audioUrl },
       mimetype: "audio/mpeg",
@@ -77,8 +75,8 @@ const play3 = async (m, gss) => {
       ptt: false,
       contextInfo: {
         externalAdReply: {
-          title: data.result.title || video.title,
-          body: `Artist: ${artistName}`,
+          title: result.result.title || video.title,
+          body: `Artist: ${result.result.artist || 'Unknown'}`,
           mediaType: 1,
           thumbnailUrl: video.thumbnail,
           renderLargerThumbnail: false
@@ -86,12 +84,13 @@ const play3 = async (m, gss) => {
       }
     }, { quoted: m });
 
-    // Success Reaction
     await gss.sendMessage(m.from, { react: { text: "🎧", key: m.key } });
 
   } catch (error) {
     console.error("PLAY3 ERROR:", error);
-    m.reply("⚠️ *Spotify API Error:* " + (error.response?.data?.message || error.message));
+    // Detailed error reporting
+    const errorMsg = error.response?.data?.message || error.message;
+    m.reply(`⚠️ *Spotify API Error:* ${errorMsg}\n\n_Tip: If search fails, try pasting the direct Spotify link._`);
   }
 };
 
