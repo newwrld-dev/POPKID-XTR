@@ -12,7 +12,7 @@ const play2Cmd = async (m, Matrix) => {
     ? body.slice(prefix.length).split(" ")[0].toLowerCase() 
     : "";
     
-  if (!["play2", "song2", "audio2"].includes(cmdName)) return;
+  if (!["play", "song", "audio"].includes(cmdName)) return;
 
   try {
     if (!q) return m.reply("❓ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ sᴏɴɢ ɴᴀᴍᴇ ᴏʀ ʟɪɴᴋ.*");
