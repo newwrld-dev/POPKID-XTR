@@ -1,66 +1,106 @@
 import axios from 'axios';
-import yts from 'yt-search';
+import fs from 'fs';
 import config from '../config.cjs';
 
-const videoDownload = async (m, gss) => {
+const videoCmd = async (m, Matrix) => {
   const prefix = config.PREFIX;
   const body = m.body || "";
-  const cmd = body.startsWith(prefix)
-    ? body.slice(prefix.length).split(" ")[0].toLowerCase()
+  const args = body.split(" ").slice(1);
+  const q = args.join(" ");
+  
+  const cmdName = body.startsWith(prefix) 
+    ? body.slice(prefix.length).split(" ")[0].toLowerCase() 
     : "";
-
-  // Command name for this file
-  if (cmd !== "video") return;
+    
+  if (!["video", "video", "mp4"].includes(cmdName)) return;
 
   try {
-    const text = body.slice(prefix.length + cmd.length).trim();
+    if (!q) return m.reply("❓ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠɪᴅᴇᴏ ɴᴀᴍᴇ ᴏʀ ʟɪɴᴋ.*");
 
-    if (!text) {
-      return m.reply("🎬 *Usage:* .video [song/video name]");
+    // Reaction for "Processing"
+    await Matrix.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
+
+    // Function to fetch branding image
+    const getMenuImage = async () => {
+      if (config.MENU_IMAGE && config.MENU_IMAGE.trim() !== '') {
+        try {
+          const response = await axios.get(config.MENU_IMAGE, { responseType: 'arraybuffer' });
+          return Buffer.from(response.data, 'binary');
+        } catch (error) {
+          return fs.readFileSync('./media/zenor.jpeg');
+        }
+      } else {
+        return fs.readFileSync('./media/zenor.jpeg');
+      }
+    };
+
+    // 1. Search for Video Metadata (using Vreden for details)
+    const searchUrl = `https://api.vreden.my.id/api/v1/download/play/audio?query=${encodeURIComponent(q)}`;
+    const searchRes = await axios.get(searchUrl);
+    
+    if (!searchRes.data.status || !searchRes.data.result.metadata) {
+        await Matrix.sendMessage(m.from, { react: { text: "❌", key: m.key } });
+        return m.reply("❌ *ᴠɪᴅᴇᴏ ɴᴏᴛ ꜰᴏᴜɴᴅ.*");
     }
 
-    // Search YouTube
-    const search = await yts(text);
-    if (!search.videos || search.videos.length === 0) {
-      return m.reply("🚫 *No results found.*");
-    }
+    const meta = searchRes.data.result.metadata;
+    const menuImage = await getMenuImage();
 
-    const video = search.videos[0];
-    const urlYt = video.url;
+    // 2. Stylish Metadata Message (Ping Style)
+    const videoStatus = `*ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴠɪᴅᴇᴏ* 🎬\n\n` +
+                        `📌 *ᴛɪᴛʟᴇ:* ${meta.title}\n` +
+                        `🕒 *ᴅᴜʀᴀᴛɪᴏɴ:* ${meta.timestamp}\n` +
+                        `👤 *ᴄʜᴀɴɴᴇʟ:* ${meta.author.name}\n\n` +
+                        `_ᴜᴘʟᴏᴀᴅɪɴɢ ʏᴏᴜʀ ᴠɪᴅᴇᴏ ꜰɪʟᴇ..._ 🚀`;
 
-    // Stylish Status Message
-    const infoMsg = `🎥 *WATCHING:* ${video.title}\n` +
-                    `⏱️ *DURATION:* ${video.timestamp}\n` +
-                    `👁️ *VIEWS:* ${video.views.toLocaleString()}\n\n` +
-                    `_⚡ Preparing your video file..._`;
-
-    await m.reply(infoMsg);
-
-    // Fetch MP4 from the new API
-    const apiUrl = `https://api.yupra.my.id/api/downloader/ytmp4?url=${encodeURIComponent(urlYt)}`;
-    const response = await axios.get(apiUrl);
-    const result = response.data;
-
-    // Validate the API response structure
-    if (!result || !result.success || !result.data?.download_url) {
-      return m.reply("❌ *Error:* The video server is currently busy. Please try again later.");
-    }
-
-    const videoUrl = result.data.download_url; //
-    const title = result.data.title || video.title; //
-
-    // Send the actual Video file
-    await gss.sendMessage(m.from, {
-      video: { url: videoUrl },
-      caption: `✅ *Download Complete:* ${title}`,
-      mimetype: "video/mp4",
-      fileName: `${title}.mp4`
+    await Matrix.sendMessage(m.from, {
+        image: menuImage,
+        caption: videoStatus,
+        contextInfo: {
+            mentionedJid: [m.sender],
+            forwardingScore: 999,
+            isForwarded: true,
+            forwardedNewsletterMessageInfo: {
+                newsletterJid: '120363289379419860@newsletter',
+                newsletterName: "ᴘᴏᴘᴋɪᴅ ᴜᴘᴅᴀᴛᴇs",
+                serverMessageId: 143
+            },
+            externalAdReply: {
+                title: "ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴠɪᴅᴇᴏ ᴘʟᴀʏᴇʀ",
+                body: `ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ: ${meta.title}`,
+                thumbnailUrl: meta.thumbnail || "https://files.catbox.moe/yr339d.jpg",
+                sourceUrl: "https://whatsapp.com/channel/0029VacgxK96hENmSRMRxx1r",
+                mediaType: 1,
+                renderLargerThumbnail: false
+            }
+        }
     }, { quoted: m });
 
-  } catch (error) {
-    console.error("VIDEO CMD ERROR:", error);
-    m.reply("⚠️ *System Error:* Could not process video download.");
+    // 3. Get Video Download Link from Elite API
+    const eliteApiUrl = `https://eliteprotech-apis.zone.id/ytmp4?url=${encodeURIComponent(meta.url)}`;
+    const downloadRes = await axios.get(eliteApiUrl);
+    
+    // Note: The API response uses .result.download for the video URL
+    const finalVideoUrl = downloadRes.data.result?.download;
+
+    if (finalVideoUrl && finalVideoUrl.startsWith('http')) {
+        // 4. Send Video File
+        await Matrix.sendMessage(m.from, { 
+            video: { url: finalVideoUrl }, 
+            caption: `*${meta.title}*\n\n_ᴘᴏᴘᴋɪᴅ xᴍᴅ ᴏᴘᴇʀᴀᴛɪᴏɴᴀʟ_`,
+            mimetype: 'video/mp4'
+        }, { quoted: m });
+        
+        await Matrix.sendMessage(m.from, { react: { text: "✅", key: m.key } });
+    } else {
+        throw new Error("Invalid Video URL");
+    }
+
+  } catch (err) {
+    console.error("VIDEO ERROR:", err);
+    await Matrix.sendMessage(m.from, { react: { text: "❌", key: m.key } });
+    m.reply("⚠️ *ᴇʀʀᴏʀ:* sʏsᴛᴇᴍ ᴄʜᴇᴄᴋ ꜰᴀɪʟᴇᴅ.");
   }
 };
 
-export default videoDownload;
+export default videoCmd;
